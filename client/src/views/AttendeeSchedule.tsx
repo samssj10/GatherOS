@@ -1,10 +1,13 @@
+import Timeline from '@/components/attendee/Timeline';
+import ErrorBoundary from '@/components/ErrorBoundary';
+
 export default function AttendeeSchedule() {
   return (
-    <section aria-labelledby="attendee-schedule-title">
-      <h1 id="attendee-schedule-title" className="sr-only">
-        Schedule
-      </h1>
-      {/* Vertical timeline is built in Phase 5. */}
-    </section>
+    <div>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">Your schedule</h1>
+      <ErrorBoundary inline>
+        <Timeline />
+      </ErrorBoundary>
+    </div>
   );
 }

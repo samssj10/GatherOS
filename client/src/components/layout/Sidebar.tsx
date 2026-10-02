@@ -1,6 +1,7 @@
-import { LayoutDashboard, Users } from 'lucide-react';
+import { LayoutDashboard, LogOut, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 interface NavItem {
   to: string;
@@ -15,6 +16,8 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export default function Sidebar() {
+  const { session, signOut } = useAuth();
+
   return (
     <aside className="fixed inset-y-0 left-0 z-20 flex w-[250px] flex-col border-r border-slate-200 bg-white">
       <div className="flex h-16 items-center gap-2 border-b border-slate-200 px-6">
@@ -43,6 +46,19 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      <div className="border-t border-slate-200 p-4">
+        <p className="truncate px-3 text-sm font-medium text-slate-900">{session?.name}</p>
+        <p className="truncate px-3 text-xs text-slate-500">{session?.email}</p>
+        <button
+          type="button"
+          onClick={signOut}
+          className="mt-3 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Sign out
+        </button>
+      </div>
     </aside>
   );
 }

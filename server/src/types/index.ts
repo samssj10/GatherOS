@@ -32,6 +32,7 @@ export interface Attendee {
 
 export interface AttendeeScheduleDTO {
   eventId: string;
+  day: number;
   sessionTitle: string;
   startTime: string;
   endTime: string;

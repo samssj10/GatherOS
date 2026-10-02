@@ -24,6 +24,7 @@ export function getBudgetSummary(): BudgetSummary {
 export function toAttendeeScheduleDTO(item: ScheduleItem, eventId: string): AttendeeScheduleDTO {
   return {
     eventId,
+    day: item.day,
     sessionTitle: item.title,
     startTime: item.startTime,
     endTime: item.endTime,

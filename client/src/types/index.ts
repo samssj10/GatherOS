@@ -32,10 +32,30 @@ export interface Attendee {
 
 export interface AttendeeScheduleDTO {
   eventId: string;
+  day: number;
   sessionTitle: string;
   startTime: string;
   endTime: string;
   locationName: string;
   category: string;
   isRsvpRequired: boolean;
+}
+
+export type AttendeeUpdate = Partial<Pick<Attendee, 'rsvpStatus' | 'dietaryPreference'>>;
+
+export interface BudgetSummary {
+  budget: number;
+  estimatedSpend: number;
+  remaining: number;
+}
+
+export interface AttendeeSummary {
+  total: number;
+  rsvp: Record<Attendee['rsvpStatus'], number>;
+  dietary: Record<Attendee['dietaryPreference'], number>;
+  flightsAssigned: number;
+}
+
+export interface ApiErrorBody {
+  error: { code: string; message: string; details?: unknown };
 }
