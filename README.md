@@ -4,19 +4,23 @@
 
 **A multi-sided corporate offsite platform.** Event planners build and budget an itinerary on a dense desktop dashboard, with AI-generated drafts from Claude. Attendees get a mobile-first view to see the schedule, RSVP in one tap and set dietary preferences. Both personas run from a single React app on top of a Node.js backend-for-frontend (BFF).
 
-<table>
-  <tr>
-    <td colspan="2"><img src="docs/screenshots/planner-dashboard.png" alt="Planner dashboard with budget tracker, RSVP totals and a three-day itinerary board"></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/screenshots/planner-roster.png" alt="Virtualized roster of 2,500 attendees with search and RSVP filter"></td>
-    <td width="50%" align="center">
-      <img src="docs/screenshots/attendee-rsvp.png" alt="Attendee mobile view with a welcome header and Accept / Decline RSVP buttons" width="240">
-      &nbsp;
-      <img src="docs/screenshots/attendee-schedule.png" alt="Attendee mobile view with a vertical timeline of the schedule" width="240">
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/screenshots/planner-dashboard.png" alt="Planner dashboard with a budget tracker, RSVP totals and a three-day itinerary board" width="900">
+  <br>
+  <sub><b>Planner dashboard:</b> budget, RSVP totals and the drag-and-drop itinerary board</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/planner-roster.png" alt="Virtualized roster of 2,500 attendees with search and an RSVP filter" width="900">
+  <br>
+  <sub><b>Attendee roster:</b> 2,500 people, searchable and filterable, virtualized</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/attendee-mobile.png" alt="Attendee mobile app: RSVP screen on the left, vertical schedule timeline on the right" width="640">
+  <br>
+  <sub><b>Attendee view (mobile):</b> one-tap RSVP and a vertical schedule timeline</sub>
+</p>
 
 ## Features
 
