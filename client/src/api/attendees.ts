@@ -2,7 +2,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/api/client';
 import { attendeeKeys } from '@/api/keys';
 import { useUiStore } from '@/store/uiStore';
-import type { Attendee, AttendeeSummary, AttendeeUpdate } from '@/types';
+import type { Attendee, AttendeeSummary, AttendeeUpdate, Paginated } from '@/types';
+
+/** The whole roster in one request; filtering and windowing happen on the client. */
+export function useAttendeeList() {
+  return useQuery({
+    queryKey: attendeeKeys.list,
+    queryFn: ({ signal }) => apiFetch<Paginated<Attendee>>('/attendees?limit=2500', { signal }),
+    staleTime: 60_000,
+  });
+}
 
 export function useAttendee(id: string | undefined) {
   return useQuery({
@@ -58,6 +67,7 @@ export function useUpdateAttendee(id: string) {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey });
       void queryClient.invalidateQueries({ queryKey: attendeeKeys.summary });
+      void queryClient.invalidateQueries({ queryKey: attendeeKeys.list });
     },
   });
 }

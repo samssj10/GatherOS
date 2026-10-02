@@ -8,8 +8,14 @@ export interface Toast {
   message: string;
 }
 
+export type RosterRsvpFilter = 'all' | 'accepted' | 'pending' | 'declined';
+
 interface UiState {
   toasts: Toast[];
+  rosterSearch: string;
+  rosterRsvpFilter: RosterRsvpFilter;
+  setRosterSearch: (value: string) => void;
+  setRosterRsvpFilter: (value: RosterRsvpFilter) => void;
   addToast: (tone: ToastTone, message: string) => void;
   dismissToast: (id: string) => void;
 }
@@ -22,6 +28,10 @@ const TOAST_DURATION_MS = 4000;
  */
 export const useUiStore = create<UiState>((set, get) => ({
   toasts: [],
+  rosterSearch: '',
+  rosterRsvpFilter: 'all',
+  setRosterSearch: (value) => set({ rosterSearch: value }),
+  setRosterRsvpFilter: (value) => set({ rosterRsvpFilter: value }),
   addToast: (tone, message) => {
     const id = crypto.randomUUID();
     set((state) => ({ toasts: [...state.toasts, { id, tone, message }] }));

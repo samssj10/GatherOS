@@ -5,7 +5,7 @@ import * as aiService from '../services/aiService';
 export const generateScheduleBodySchema = z
   .object({
     prompt: z.string().trim().min(3).max(500),
-    city: z.string().trim().min(2).max(80),
+    city: z.string().trim().min(2).max(80).optional(),
     days: z.number().int().min(1).max(3),
     attendeeCount: z.number().int().min(1).max(2500),
     budget: z.number().positive().max(10_000_000).optional(),

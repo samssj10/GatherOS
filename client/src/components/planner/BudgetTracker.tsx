@@ -1,4 +1,4 @@
-import { useBudgetSummary } from '@/api/schedule';
+import { useBudgetSummary, useScheduleDraft } from '@/api/schedule';
 import ErrorNotice from '@/components/ErrorNotice';
 import Skeleton from '@/components/Skeleton';
 import { formatCurrency } from '@/utils/format';
@@ -10,7 +10,9 @@ function barColor(percent: number): string {
 }
 
 export default function BudgetTracker() {
-  const { data, isPending, isError, refetch } = useBudgetSummary();
+  const budgetQuery = useBudgetSummary();
+  const draft = useScheduleDraft().data;
+  const { isPending, isError, refetch } = budgetQuery;
 
   if (isError) {
     return <ErrorNotice message="Could not load the budget." onRetry={() => void refetch()} />;
@@ -26,6 +28,12 @@ export default function BudgetTracker() {
     );
   }
 
+  // While an AI draft is open, show what it would cost instead of the saved itinerary.
+  const saved = budgetQuery.data;
+  const draftSpend = draft?.reduce((sum, item) => sum + item.costEstimate, 0) ?? 0;
+  const data = draft
+    ? { budget: saved.budget, estimatedSpend: draftSpend, remaining: saved.budget - draftSpend }
+    : saved;
   const percent = data.budget > 0 ? (data.estimatedSpend / data.budget) * 100 : 0;
   const overBudget = data.remaining < 0;
 
@@ -63,7 +71,9 @@ export default function BudgetTracker() {
           </dd>
         </div>
         <div>
-          <dt className="text-sm text-slate-500">Estimated spend</dt>
+          <dt className="text-sm text-slate-500">
+            {draft ? 'Estimated spend (draft)' : 'Estimated spend'}
+          </dt>
           <dd className="mt-1 text-xl font-bold tracking-tight text-slate-900">
             {formatCurrency(data.estimatedSpend)}
           </dd>

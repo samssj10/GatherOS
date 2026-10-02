@@ -59,3 +59,18 @@ export interface AttendeeSummary {
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: unknown };
 }
+
+export interface Paginated<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface GenerateScheduleInput {
+  prompt: string;
+  city?: string;
+  days: number;
+  attendeeCount: number;
+  budget?: number;
+}

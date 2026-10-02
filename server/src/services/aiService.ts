@@ -4,10 +4,11 @@ import type { ScheduleItem } from '../types';
 import { AppError } from '../utils/AppError';
 import { env } from '../utils/env';
 import { logger } from '../utils/logger';
+import { SCHEDULE_CATEGORIES, scheduleItemSchema } from '../utils/scheduleSchema';
 
 export interface GenerateScheduleInput {
   prompt: string;
-  city: string;
+  city?: string;
   days: number;
   attendeeCount: number;
   budget?: number;
@@ -15,8 +16,6 @@ export interface GenerateScheduleInput {
 
 export const SYSTEM_PROMPT =
   'You are an elite corporate event planner organizing an offsite. Generate a realistic, engaging itinerary. Space out intensive workshops with 15-minute buffer periods. Ensure catering estimates are realistic for the requested city. Do not schedule heavy keynotes immediately after lunch. Output strictly matching the requested JSON schema.';
-
-const CATEGORIES = ['workshop', 'keynote', 'meal', 'activity'] as const;
 
 // Structured outputs require an object at the root, so the ScheduleItem[] is wrapped in `items`.
 export const SCHEDULE_JSON_SCHEMA = {
@@ -48,7 +47,7 @@ export const SCHEDULE_JSON_SCHEMA = {
           title: { type: 'string' },
           description: { type: 'string' },
           location: { type: 'string' },
-          category: { type: 'string', enum: [...CATEGORIES] },
+          category: { type: 'string', enum: [...SCHEDULE_CATEGORIES] },
           costEstimate: { type: 'number', description: 'Total estimated cost in USD' },
         },
       },
@@ -56,23 +55,7 @@ export const SCHEDULE_JSON_SCHEMA = {
   },
 };
 
-const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected HH:mm');
-
-const scheduleResponseSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string().min(1),
-      day: z.number().int().min(1),
-      startTime: timeSchema,
-      endTime: timeSchema,
-      title: z.string().min(1),
-      description: z.string(),
-      location: z.string(),
-      category: z.enum(CATEGORIES),
-      costEstimate: z.number().min(0),
-    }),
-  ),
-});
+const scheduleResponseSchema = z.object({ items: z.array(scheduleItemSchema).min(1) });
 
 let client: Anthropic | null = null;
 
@@ -85,11 +68,8 @@ function getClient(): Anthropic {
 }
 
 function buildUserMessage(input: GenerateScheduleInput): string {
-  const lines = [
-    `City: ${input.city}`,
-    `Number of days: ${input.days}`,
-    `Attendees: ${input.attendeeCount}`,
-  ];
+  const lines = [`Number of days: ${input.days}`, `Attendees: ${input.attendeeCount}`];
+  if (input.city) lines.unshift(`City: ${input.city}`);
   if (input.budget !== undefined) lines.push(`Total budget (USD): ${input.budget}`);
   lines.push(`Planner request: ${input.prompt}`);
   return lines.join('\n');
@@ -165,5 +145,9 @@ export async function generateSchedule(input: GenerateScheduleInput): Promise<Sc
     throw new AppError(502, 'The AI provider returned an invalid schedule', 'AI_INVALID_RESPONSE');
   }
 
-  return parsed.data.items;
+  // Model-chosen ids are not trusted to be unique; drag-and-drop and saving both rely on that.
+  return parsed.data.items.map((item, index) => ({
+    ...item,
+    id: `ai-${String(index + 1).padStart(3, '0')}`,
+  }));
 }
