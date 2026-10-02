@@ -48,7 +48,7 @@ test('planner generates an AI itinerary, then an attendee RSVPs with optimistic 
     }
   }
   // Every mocked session is draggable.
-  await expect(page.getByRole('button', { name: /^Drag .+ to another day$/ })).toHaveCount(5);
+  await expect(page.getByRole('button', { name: /^Drag .+ to reorder or move$/ })).toHaveCount(5);
 
   // 4. Persona switch: clear cookies, inject the Attendee role cookie and reload.
   await context.clearCookies();

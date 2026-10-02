@@ -2,6 +2,7 @@ import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/reac
 import { ApiError, apiFetch } from '@/api/client';
 import { scheduleKeys } from '@/api/keys';
 import { useUiStore } from '@/store/uiStore';
+import { reflowDay } from '@/utils/reflow';
 import type {
   AttendeeScheduleDTO,
   BudgetSummary,
@@ -89,46 +90,53 @@ export function useSaveSchedule() {
   });
 }
 
-interface MoveInput {
-  id: string;
+interface ReorderInput {
   day: number;
+  /** Every session that should be on `day`, in the new order (may include one moved in from another day). */
+  orderedIds: string[];
 }
 
 /**
- * Moves a session to another day. Optimistic: the card jumps columns immediately and snaps
- * back if the save fails. While an AI draft exists the move only touches the local draft.
+ * Reorders a day, or moves a session onto it. The day is re-timed: sessions run back to back,
+ * 15 minutes apart, durations kept. Optimistic: the board updates immediately using the same
+ * rule as the server, snaps back if the save fails, and adopts the server's answer on success.
+ * While an AI draft exists the change only touches the local draft.
  */
-export function useMoveScheduleItem() {
+export function useReorderDay() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, day }: MoveInput) => {
-      if (queryClient.getQueryData(scheduleKeys.draft)) return;
-      await apiFetch<ScheduleItem>(`/schedule/${id}`, { method: 'PATCH', body: { day } });
+    mutationFn: async ({ day, orderedIds }: ReorderInput) => {
+      if (queryClient.getQueryData(scheduleKeys.draft)) return null;
+      return apiFetch<ScheduleItem[]>(`/schedule/days/${day}/order`, {
+        method: 'PUT',
+        body: { itemIds: orderedIds },
+      });
     },
 
-    onMutate: async ({ id, day }) => {
+    onMutate: async ({ day, orderedIds }) => {
       const key = queryClient.getQueryData(scheduleKeys.draft)
         ? scheduleKeys.draft
         : scheduleKeys.planner;
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<ScheduleItem[] | null>(key);
-      if (previous) {
-        queryClient.setQueryData<ScheduleItem[]>(
-          key,
-          previous.map((item) => (item.id === id ? { ...item, day } : item)),
-        );
-      }
-      return { key, previous };
+      const moved = (previous ?? []).some((item) => orderedIds.includes(item.id) && item.day !== day);
+      const next = previous ? reflowDay(previous, day, orderedIds) : null;
+      if (next) queryClient.setQueryData<ScheduleItem[]>(key, next);
+      return { key, previous, moved };
     },
 
     onError: (_error, _input, context) => {
       if (context?.previous) queryClient.setQueryData(context.key, context.previous);
-      useUiStore.getState().addToast('error', 'Could not move that session. Please try again.');
+      useUiStore.getState().addToast('error', 'Could not save that change. Please try again.');
     },
 
-    onSuccess: (_data, { day }) => {
-      useUiStore.getState().addToast('success', `Moved to Day ${day}.`);
+    onSuccess: (saved, { day }, context) => {
+      // The server computed the times itself, so its answer is the source of truth.
+      if (saved) queryClient.setQueryData(scheduleKeys.planner, saved);
+      useUiStore
+        .getState()
+        .addToast('success', context.moved ? `Moved to Day ${day}.` : `Day ${day} reordered.`);
     },
 
     onSettled: (_data, _error, _input, context) => {

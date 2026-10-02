@@ -16,12 +16,12 @@ export const getBudgetSummary: RequestHandler = (_req, res) => {
   res.json(scheduleService.getBudgetSummary());
 };
 
-export const scheduleItemParamsSchema = z.object({
-  id: z.string().regex(/^[\w-]{1,60}$/, 'Invalid schedule item id'),
+export const reorderDayParamsSchema = z.object({
+  day: z.coerce.number().int().min(1).max(MAX_EVENT_DAYS),
 });
 
-export const moveScheduleItemBodySchema = z
-  .object({ day: z.number().int().min(1).max(MAX_EVENT_DAYS) })
+export const reorderDayBodySchema = z
+  .object({ itemIds: z.array(z.string().regex(/^[\w-]{1,60}$/)).min(1).max(60) })
   .strict();
 
 export const replaceScheduleBodySchema = z
@@ -32,10 +32,10 @@ export const replaceScheduleBodySchema = z
     path: ['items'],
   });
 
-export const moveScheduleItem: RequestHandler = (_req, res) => {
-  const { id } = res.locals.validated.params as z.infer<typeof scheduleItemParamsSchema>;
-  const { day } = res.locals.validated.body as z.infer<typeof moveScheduleItemBodySchema>;
-  res.json(scheduleService.moveScheduleItem(id, day));
+export const reorderDay: RequestHandler = (_req, res) => {
+  const { day } = res.locals.validated.params as z.infer<typeof reorderDayParamsSchema>;
+  const { itemIds } = res.locals.validated.body as z.infer<typeof reorderDayBodySchema>;
+  res.json(scheduleService.reorderDay(day, itemIds));
 };
 
 export const replaceSchedule: RequestHandler = (_req, res) => {

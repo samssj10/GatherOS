@@ -1,5 +1,5 @@
 import type { AttendeeScheduleDTO, ScheduleItem } from '../types';
-import { AppError } from '../utils/AppError';
+import { reflowDay } from '../utils/reflow';
 import { db } from './mockDb';
 
 export interface BudgetSummary {
@@ -39,11 +39,9 @@ export function listAttendeeSchedule(eventId: string): AttendeeScheduleDTO[] {
   return db.schedule.map((item) => toAttendeeScheduleDTO(item, eventId));
 }
 
-export function moveScheduleItem(id: string, day: number): ScheduleItem {
-  const item = db.schedule.find((entry) => entry.id === id);
-  if (!item) throw AppError.notFound(`Schedule item ${id} not found`);
-  item.day = day;
-  return item;
+export function reorderDay(day: number, itemIds: string[]): ScheduleItem[] {
+  db.schedule = reflowDay(db.schedule, day, itemIds);
+  return db.schedule;
 }
 
 export function replaceSchedule(items: ScheduleItem[]): ScheduleItem[] {

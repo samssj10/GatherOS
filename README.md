@@ -27,7 +27,8 @@
 ### For planners (desktop)
 
 - **AI itinerary drafts.** Describe the offsite in a prompt, optionally set the city, number of days and attendee count, and Claude returns a structured itinerary. The draft appears on the board as *unsaved*, with the budget recalculated, until you save it or discard it.
-- **Drag-and-drop calendar.** A three-day board where sessions move between days by mouse or keyboard (Space, arrow keys, Space). Every card also has move-to-day buttons as a non-drag alternative.
+- **Drag-and-drop calendar.** A three-day board where sessions can be reordered within a day or dropped onto another day, by mouse or keyboard (Space, arrow keys, Space). A marker shows where a card will land. Every card also has up, down, previous-day and next-day buttons as a non-drag alternative.
+- **Automatic re-timing.** After any reorder or move, the affected day is re-timed so sessions run back to back, 15 minutes apart, each keeping its own duration. No AI involved, just arithmetic (see below).
 - **Budget tracker.** Planned spend against the total budget, with a progress bar that turns amber and then rose as the budget is consumed.
 - **Virtualized roster.** All 2,500 attendees are searchable and filterable by RSVP status, yet only about 20 rows exist in the DOM at any time.
 - **RSVP overview.** Live accepted, pending and declined totals.
@@ -81,6 +82,7 @@ flowchart LR
 - **Optimistic updates with rollback.** RSVP, dietary and drag-and-drop moves update the cache immediately, restore the previous value on error, and confirm with a toast only after the server answers.
 - **AI drafts live in a cache-only query.** The unsaved draft is stored under a TanStack Query key with `skipToken`, so it is never refetched. A window refocus cannot overwrite it with the saved itinerary. Moving cards inside a draft is purely local, and nothing reaches the server until the planner clicks *Save*.
 - **Model output is not trusted.** Even with structured outputs, Claude's response is re-validated with the same zod schema used by the save endpoint, and its IDs are replaced with unique ones.
+- **Re-timing is deterministic and shared.** The rule lives in one small pure function, `reflowDay`, on the server and mirrored on the client. The client copy makes the board update instantly; the server's answer then replaces it, so the two can never silently drift apart.
 - **Sessions are signed cookies.** The session is an HMAC-signed token in an `HttpOnly`, `SameSite=Strict` cookie (`Secure` in production), verified with a constant-time comparison.
 
 ## Getting started
@@ -197,7 +199,7 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 | `GET /schedule/me` | signed in | Attendee-shaped itinerary (`AttendeeScheduleDTO[]`) |
 | `GET /schedule/budget` | planner | Budget, estimated spend and remaining |
 | `PUT /schedule` | planner | Replace the itinerary (used to save an AI draft) |
-| `PATCH /schedule/:id` | planner | Move a session to another day |
+| `PUT /schedule/days/:day/order` | planner | Body `{ itemIds }`: every session that should be on that day, in order (may include one moved in from another day). The server re-times the day and returns the full itinerary |
 | `POST /ai/generate-schedule` | planner | Generate an itinerary with Claude. Rate limited |
 
 ## Testing and CI
@@ -250,6 +252,6 @@ GatherOS/
 
 - **No persistent database.** Data lives in server memory and resets on every restart: the 2,500 attendees, the itinerary and any saved changes.
 - **Mock authentication.** Sign-in is passwordless and exists for demonstration. Replace it with a real identity provider before any real use.
-- **Drag-and-drop moves sessions between days, not times.** Within a day, sessions stay ordered by start time.
+- **Reordering collapses gaps.** Re-timing packs a day back to back with 15-minute gaps, so any longer gaps (a lunch break, free time) are closed up when you reorder that day. The day starts at the same time it did before. A move to another day re-times only the destination day, and the day it left is left as it was. A reorder that would push a day past midnight is refused.
 - **Single event, three days.** The data model and UI are built around one offsite of up to three days.
 - **No unit tests yet.** Coverage today is the end-to-end journey plus static checks (types and lint).

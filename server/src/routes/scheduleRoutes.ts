@@ -12,19 +12,20 @@ scheduleRouter.get('/me', controller.listMySchedule);
 scheduleRouter.get('/', requireRole('planner'), controller.listSchedule);
 scheduleRouter.get('/budget', requireRole('planner'), controller.getBudgetSummary);
 
-// Planner-only edits: save a whole itinerary (e.g. an accepted AI draft) or move one session.
+// Planner-only edits: save a whole itinerary (e.g. an accepted AI draft) or reorder a day.
 scheduleRouter.put(
   '/',
   requireRole('planner'),
   validate({ body: controller.replaceScheduleBodySchema }),
   controller.replaceSchedule,
 );
-scheduleRouter.patch(
-  '/:id',
+// Reorder one day (also how a session is moved onto it); the server re-times that day.
+scheduleRouter.put(
+  '/days/:day/order',
   requireRole('planner'),
   validate({
-    params: controller.scheduleItemParamsSchema,
-    body: controller.moveScheduleItemBodySchema,
+    params: controller.reorderDayParamsSchema,
+    body: controller.reorderDayBodySchema,
   }),
-  controller.moveScheduleItem,
+  controller.reorderDay,
 );
