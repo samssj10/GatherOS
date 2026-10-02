@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Husky's `prepare` script would try to install git hooks inside CI.
+  HUSKY: '0'
+
+jobs:
+  quality:
+    name: Typecheck and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix client
+          npm ci --prefix server
+
+      - name: tsc --noEmit (client)
+        run: npm run typecheck --prefix client
+
+      - name: tsc --noEmit (server)
+        run: npm run typecheck --prefix server
+
+      - name: tsc --noEmit (e2e)
+        run: npx tsc --noEmit -p e2e
+
+      - name: ESLint (client)
+        run: npm run lint --prefix client
+
+      - name: ESLint (server)
+        run: npm run lint --prefix server
+
+  e2e:
+    name: Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix client
+          npm ci --prefix server
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # Playwright starts the BFF and the Vite client itself (see e2e/playwright.config.ts).
+      # No secrets are needed: the AI endpoint is mocked and the session secret is a test value.
+      - name: Run end-to-end tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

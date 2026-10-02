@@ -8,6 +8,8 @@ export default function ToastViewport() {
 
   return (
     <div
+      role="region"
+      aria-label="Notifications"
       aria-live="polite"
       aria-atomic="false"
       className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex flex-col items-center gap-2 px-4 md:bottom-6"
@@ -15,7 +17,6 @@ export default function ToastViewport() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          role="status"
           data-testid="toast"
           className="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-md"
         >

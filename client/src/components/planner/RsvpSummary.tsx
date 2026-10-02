@@ -19,9 +19,9 @@ export default function RsvpSummary() {
   }
 
   const rows = [
-    { label: 'Accepted', value: data.rsvp.accepted, color: 'text-emerald-600' },
-    { label: 'Pending', value: data.rsvp.pending, color: 'text-amber-500' },
-    { label: 'Declined', value: data.rsvp.declined, color: 'text-rose-500' },
+    { label: 'Accepted', value: data.rsvp.accepted, color: 'text-emerald-700' },
+    { label: 'Pending', value: data.rsvp.pending, color: 'text-amber-700' },
+    { label: 'Declined', value: data.rsvp.declined, color: 'text-rose-700' },
   ];
 
   return (

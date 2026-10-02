@@ -1,3 +1,4 @@
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAttendee, useUpdateAttendee } from '@/api/attendees';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ErrorNotice from '@/components/ErrorNotice';
@@ -63,6 +64,7 @@ function DietaryForm({ attendeeId }: { attendeeId: string }) {
 }
 
 export default function AttendeePreferences() {
+  usePageTitle('Dietary preferences');
   const { session } = useAuth();
   if (!session) return null;
 

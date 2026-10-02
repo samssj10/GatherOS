@@ -1,3 +1,4 @@
+import { usePageTitle } from '@/hooks/usePageTitle';
 import BudgetTracker from '@/components/planner/BudgetTracker';
 import CalendarBoard from '@/components/planner/CalendarBoard';
 import DraftBanner from '@/components/planner/DraftBanner';
@@ -5,6 +6,7 @@ import RsvpSummary from '@/components/planner/RsvpSummary';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 export default function PlannerDashboard() {
+  usePageTitle('Dashboard');
   return (
     <div className="space-y-6">
       <div>

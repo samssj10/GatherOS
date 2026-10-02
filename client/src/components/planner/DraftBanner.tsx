@@ -21,7 +21,7 @@ export default function DraftBanner() {
           <p className="text-sm font-bold tracking-tight text-slate-900">
             AI draft itinerary &middot; {draft.length} sessions
           </p>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-600">
             Not saved yet. Drag sessions between days, then save to publish it to attendees.
           </p>
         </div>

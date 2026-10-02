@@ -1,3 +1,4 @@
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -13,6 +14,7 @@ const DEMO_ACCOUNTS = [
 ];
 
 export default function Login() {
+  usePageTitle('Sign in');
   const { session, isLoading, signIn } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -67,7 +69,7 @@ export default function Login() {
           </div>
 
           {error && (
-            <p id="login-error" role="alert" className="text-sm font-medium text-rose-500">
+            <p id="login-error" role="alert" className="text-sm font-medium text-rose-700">
               {error}
             </p>
           )}

@@ -1,9 +1,11 @@
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { LogOut } from 'lucide-react';
 import RsvpCard from '@/components/attendee/RsvpCard';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function AttendeeView() {
+  usePageTitle('Your offsite');
   const { session, signOut } = useAuth();
   if (!session) return null;
 

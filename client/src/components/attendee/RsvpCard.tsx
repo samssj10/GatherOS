@@ -9,17 +9,17 @@ const STATUS_COPY: Record<RsvpStatus, { title: string; detail: string; tone: str
   pending: {
     title: 'Will you be joining us?',
     detail: 'Let the organizers know so they can plan for you.',
-    tone: 'text-amber-500',
+    tone: 'text-amber-700',
   },
   accepted: {
     title: "You're going!",
     detail: 'Your spot is confirmed. You can change your answer any time.',
-    tone: 'text-emerald-600',
+    tone: 'text-emerald-700',
   },
   declined: {
     title: "You've declined",
     detail: 'Changed your mind? You can still accept.',
-    tone: 'text-rose-500',
+    tone: 'text-rose-700',
   },
 };
 
@@ -80,7 +80,7 @@ export default function RsvpCard({ attendeeId }: { attendeeId: string }) {
           onClick={() => choose('declined')}
           className={`h-12 w-full rounded-lg text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
             status === 'declined'
-              ? 'bg-rose-500 text-white hover:bg-rose-600'
+              ? 'bg-rose-600 text-white hover:bg-rose-700'
               : 'border border-slate-200 bg-white text-slate-900 hover:bg-slate-50'
           }`}
         >
