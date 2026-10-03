@@ -9,6 +9,7 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  STAMP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
   SESSION_TTL_HOURS: z.coerce.number().positive().default(8),
   PLANNER_EMAIL: z.string().email().default('planner@gatheros.example.com'),

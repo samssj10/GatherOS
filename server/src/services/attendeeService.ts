@@ -57,19 +57,6 @@ export function updateAttendee(id: string, update: AttendeeUpdate): Attendee {
   return attendee;
 }
 
-/** Records a check-in. Only attendees who are going can collect stamps; repeating one is harmless. */
-export function addStamp(attendeeId: string, sessionId: string): Attendee {
-  const attendee = getAttendeeById(attendeeId);
-  if (!db.schedule.some((item) => item.id === sessionId)) {
-    throw AppError.notFound(`Session ${sessionId} not found`);
-  }
-  if (attendee.rsvpStatus !== 'accepted') {
-    throw AppError.forbidden('Accept your RSVP to collect stamps');
-  }
-  if (!attendee.stamps.includes(sessionId)) attendee.stamps.push(sessionId);
-  return attendee;
-}
-
 /**
  * Mock reminder: marks pending attendees as nudged. No message is actually sent. With no ids,
  * every pending attendee is nudged. Attendees who already answered are skipped.
