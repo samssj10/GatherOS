@@ -1,8 +1,9 @@
-import { Loader2, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { Loader2, SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useAttendeeSummary } from '@/api/attendees';
 import { useBudgetSummary, useGenerateSchedule } from '@/api/schedule';
+import BurstIcon from '@/components/layout/BurstIcon';
 
 const fieldClass =
   'mt-1 h-11 w-full rounded-xl border border-field bg-white px-3 text-sm text-ink placeholder:text-muted hover:bg-wash disabled:opacity-60';
@@ -49,7 +50,7 @@ export default function AiCommandBar() {
             Describe the offsite you want to plan
           </label>
           <div className="flex min-h-12 min-w-0 flex-[1_1_360px] items-center gap-2.5 rounded-[14px] border border-field bg-wash px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand">
-            <Sparkles className="size-4.5 shrink-0 text-brand" strokeWidth={1.8} aria-hidden="true" />
+            <BurstIcon className="size-4.5 shrink-0 text-brand" />
             <input
               id="ai-prompt"
               type="text"
@@ -81,7 +82,7 @@ export default function AiCommandBar() {
             {pending ? (
               <Loader2 className="size-4.5 animate-spin" strokeWidth={1.8} aria-hidden="true" />
             ) : (
-              <Sparkles className="size-4.5" strokeWidth={1.8} aria-hidden="true" />
+              <BurstIcon className="size-4.5" />
             )}
             {pending ? 'Generating…' : 'Generate draft'}
           </button>

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/samssj10/GatherOS/actions/workflows/ci.yml/badge.svg)](https://github.com/samssj10/GatherOS/actions/workflows/ci.yml)
 
-**A multi-sided corporate offsite platform, designed as a game.** Planners run their offsite from a "mission control" dashboard: milestones, a host rank, a budget breakdown and an AI-drafted, drag-and-drop itinerary. Attendees get a mobile-first companion where RSVPing, picking a meal and checking in at sessions earns XP, stamps and badges. Both personas run from one React app on a Node.js backend-for-frontend (BFF), with itineraries drafted by Claude.
+**A multi-sided corporate offsite platform, designed as a game.** Planners run their offsite from a "mission control" dashboard: milestones, a host rank, a budget breakdown and an AI-drafted, drag-and-drop itinerary. Attendees get a companion, mobile-first with a full desktop layout, where RSVPing, picking a meal and checking in at sessions earns XP, stamps and badges. Both personas run from one React app on a Node.js backend-for-frontend (BFF), with itineraries drafted by Claude.
 
 <p align="center">
   <img src="docs/screenshots/planner-dashboard.png" alt="Planner dashboard: readiness hero, milestones, budget by category, RSVP overview and a three-day itinerary board" width="900">
@@ -19,7 +19,19 @@
 <p align="center">
   <img src="docs/screenshots/attendee-mobile.png" alt="Attendee mobile app: home with level and quests, the journey timeline with stamps, and the passport with badges" width="900">
   <br>
-  <sub><b>Attendee app:</b> level and quests, the journey with check-in stamps, and the passport</sub>
+  <sub><b>Attendee app on a phone:</b> level and quests, the journey with check-in stamps, and the passport</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/attendee-desktop.png" alt="Attendee journey on desktop: a top navigation bar with a level pill, a stamp progress strip and one column per day" width="900">
+  <br>
+  <sub><b>Attendee site on desktop:</b> a top bar with your level, a stamp progress strip and one column per day</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/sign-in.png" alt="Sign-in page: a dark brand panel on the left, and an email field with Planner and Attendee demo cards on the right" width="900">
+  <br>
+  <sub><b>Sign-in:</b> passwordless, with one-click demo accounts for both personas</sub>
 </p>
 
 ## Features
@@ -33,13 +45,13 @@
 - **RSVP overview.** Accepted, pending and declined totals with a Half House marker.
 - **Virtualized roster.** All 2,500 attendees, searchable and filterable by response, with only about 20 rows in the DOM at any time. A **Trip ready** meter shows who has answered, accepted and booked a flight, and **Nudge** reminds pending attendees one at a time or all at once.
 
-### For attendees (mobile-first)
+### For attendees (phone and desktop)
 
-- **Home.** Level, rank and XP at a glance. The RSVP is a quest ("Are you in?") with an optimistic UI that responds instantly and rolls back on failure. A pre-trip checklist and a "first stop" teaser follow.
-- **Journey.** Day tabs and a stop-by-stop timeline. **Check in** at a session to collect its stamp and XP.
-- **Passport.** Your stamps, six badges (Early Responder, Fuelled Up, Jet Set, Front Row, Sea Legs, Full House) and a **team race** showing the share of each department that is going.
+- **Home.** Level, rank and XP at a glance. The RSVP is a quest ("Are you in?") with an optimistic UI that responds instantly and rolls back on failure. A pre-trip checklist and a "first stop" teaser follow. On desktop the page becomes two columns with a "Day 1 at a glance" card.
+- **Journey.** On a phone: day tabs and a stop-by-stop timeline. On desktop: a stamp progress strip and one column per day. **Check in** at a session to collect its stamp and XP.
+- **Passport.** Your stamps, six badges (Early Responder, Fuelled Up, Jet Set, Front Row, Sea Legs, Full House) and a **team race** showing the share of each department that is going. On desktop it opens with a hero of XP, stamps and badges.
 - **Dietary quest.** Four large options, saved instantly, with a "Meals on this trip" list.
-- Touch targets of at least 44px and a four-tab bottom navigation.
+- Touch targets of at least 44px. A four-tab bottom navigation on phones and a top navigation bar, with your level and XP, on desktop.
 
 ### Platform
 

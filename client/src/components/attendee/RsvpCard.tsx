@@ -19,7 +19,7 @@ export default function RsvpCard({ attendee }: { attendee: Attendee }) {
   return (
     <section
       aria-live="polite"
-      className="flex flex-col gap-3.5 rounded-3xl border border-line bg-white p-5"
+      className="flex flex-col gap-3.5 rounded-3xl border border-line bg-white p-5 lg:p-6"
     >
       {status === 'accepted' && (
         <>
@@ -36,20 +36,22 @@ export default function RsvpCard({ attendee }: { attendee: Attendee }) {
               <p className="mt-0.5 text-sm text-body">Spot confirmed · +{XP.rsvp} XP earned</p>
             </div>
           </div>
-          <Link
-            to="/attendee/schedule"
-            className="flex min-h-12.5 items-center justify-center gap-2 rounded-[14px] bg-brand text-base font-semibold text-white no-underline transition-colors hover:bg-brand-hover"
-          >
-            See your journey
-            <ChevronRight className="size-4.5" strokeWidth={2} aria-hidden="true" />
-          </Link>
-          <button
-            type="button"
-            onClick={() => choose('declined')}
-            className="min-h-11 text-sm text-body underline hover:text-ink"
-          >
-            Can't make it anymore?
-          </button>
+          <div className="flex flex-col gap-3.5 lg:flex-row lg:flex-wrap lg:gap-2.5">
+            <Link
+              to="/attendee/schedule"
+              className="flex min-h-12.5 items-center justify-center gap-2 rounded-[14px] bg-brand text-base font-semibold text-white no-underline transition-colors hover:bg-brand-hover lg:min-h-12 lg:flex-[1_1_200px] lg:text-[15px]"
+            >
+              See your journey
+              <ChevronRight className="size-4.5" strokeWidth={2} aria-hidden="true" />
+            </Link>
+            <button
+              type="button"
+              onClick={() => choose('declined')}
+              className="min-h-11 text-sm text-body underline hover:text-ink lg:min-h-12 lg:rounded-[14px] lg:border lg:border-field lg:bg-white lg:px-4 lg:no-underline lg:hover:bg-wash"
+            >
+              Can't make it anymore<span className="lg:hidden">?</span>
+            </button>
+          </div>
         </>
       )}
 
@@ -66,20 +68,22 @@ export default function RsvpCard({ attendee }: { attendee: Attendee }) {
               Confirm your spot to unlock your schedule and start collecting stamps.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => choose('accepted')}
-            className="min-h-13 rounded-[14px] bg-brand text-base font-semibold text-white transition-colors hover:bg-brand-hover"
-          >
-            I'm in
-          </button>
-          <button
-            type="button"
-            onClick={() => choose('declined')}
-            className="min-h-12 rounded-[14px] border border-field bg-white text-[15px] font-medium transition-colors hover:bg-wash"
-          >
-            Can't make it
-          </button>
+          <div className="flex flex-col gap-3.5 lg:flex-row lg:flex-wrap lg:gap-2.5">
+            <button
+              type="button"
+              onClick={() => choose('accepted')}
+              className="min-h-13 rounded-[14px] bg-brand text-base font-semibold text-white transition-colors hover:bg-brand-hover lg:min-h-12.5 lg:flex-[1_1_160px]"
+            >
+              I'm in
+            </button>
+            <button
+              type="button"
+              onClick={() => choose('declined')}
+              className="min-h-12 rounded-[14px] border border-field bg-white text-[15px] font-medium transition-colors hover:bg-wash lg:min-h-12.5 lg:flex-[1_1_160px]"
+            >
+              Can't make it
+            </button>
+          </div>
         </>
       )}
 
