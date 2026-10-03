@@ -51,6 +51,9 @@ jobs:
       - name: ESLint (server)
         run: npm run lint --prefix server
 
+      - name: Unit tests (client and server)
+        run: npm run test:unit
+
   e2e:
     name: Playwright
     runs-on: ubuntu-latest

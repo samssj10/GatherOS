@@ -4,8 +4,14 @@ const currency = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 });
 
+const integer = new Intl.NumberFormat('en-US');
+
 export function formatCurrency(amount: number): string {
   return currency.format(amount);
+}
+
+export function formatNumber(value: number): string {
+  return integer.format(value);
 }
 
 export const CATEGORY_LABELS = {
@@ -15,12 +21,30 @@ export const CATEGORY_LABELS = {
   activity: 'Activity',
 } as const;
 
+export interface CategoryStyle {
+  /** Chip: tinted background with dark text. */
+  badge: string;
+  /** Solid marker color. */
+  dot: string;
+  /** Dashed ring border (stamps, timeline stops). */
+  ring: string;
+  /** Text that stays legible on white. */
+  text: string;
+}
+
 // Full class names so Tailwind can detect them statically.
-export const CATEGORY_STYLES: Record<string, { badge: string; dot: string }> = {
-  workshop: { badge: 'bg-indigo-50 text-indigo-700', dot: 'bg-indigo-600' },
-  keynote: { badge: 'bg-violet-50 text-violet-700', dot: 'bg-violet-600' },
-  meal: { badge: 'bg-orange-50 text-orange-700', dot: 'bg-orange-500' },
-  activity: { badge: 'bg-teal-50 text-teal-700', dot: 'bg-teal-600' },
+const CATEGORY_STYLES: Record<string, CategoryStyle> = {
+  keynote: { badge: 'bg-brand-tint text-brand-ink', dot: 'bg-brand', ring: 'border-brand', text: 'text-brand-ink' },
+  workshop: { badge: 'bg-blue-tint text-blue-ink', dot: 'bg-blue', ring: 'border-blue', text: 'text-blue-ink' },
+  meal: { badge: 'bg-orange-tint text-warn-ink', dot: 'bg-orange', ring: 'border-orange', text: 'text-warn-ink' },
+  activity: { badge: 'bg-ok-tint text-ok-ink', dot: 'bg-ok', ring: 'border-ok', text: 'text-ok-ink' },
+};
+
+const FALLBACK_STYLE: CategoryStyle = {
+  badge: 'bg-hairline text-body',
+  dot: 'bg-muted',
+  ring: 'border-muted',
+  text: 'text-body',
 };
 
 export function categoryLabel(category: string): string {
@@ -29,6 +53,15 @@ export function categoryLabel(category: string): string {
     : category;
 }
 
-export function categoryStyle(category: string): { badge: string; dot: string } {
-  return CATEGORY_STYLES[category] ?? { badge: 'bg-slate-100 text-slate-700', dot: 'bg-slate-500' };
+export function categoryStyle(category: string): CategoryStyle {
+  return CATEGORY_STYLES[category] ?? FALLBACK_STYLE;
+}
+
+export function initials(fullName: string): string {
+  return fullName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }

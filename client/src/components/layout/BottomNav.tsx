@@ -1,4 +1,4 @@
-import { CalendarDays, Home, UtensilsCrossed } from 'lucide-react';
+import { Award, CalendarDays, House, Utensils } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -10,33 +10,42 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/attendee', label: 'Home', icon: Home, end: true },
-  { to: '/attendee/schedule', label: 'Schedule', icon: CalendarDays },
-  { to: '/attendee/preferences', label: 'Dietary', icon: UtensilsCrossed },
+  { to: '/attendee', label: 'Home', icon: House, end: true },
+  { to: '/attendee/schedule', label: 'Journey', icon: CalendarDays },
+  { to: '/attendee/passport', label: 'Passport', icon: Award },
+  { to: '/attendee/preferences', label: 'Dietary', icon: Utensils },
 ];
 
 export default function BottomNav() {
   return (
     <nav
-      aria-label="Attendee navigation"
-      className="fixed bottom-0 left-1/2 z-20 w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom,0px)]"
+      aria-label="Attendee"
+      className="fixed bottom-0 left-1/2 z-20 w-full max-w-md -translate-x-1/2 border-t border-line bg-white px-2 pt-1.5 pb-[max(0.625rem,env(safe-area-inset-bottom,0px))]"
     >
-      <ul className="grid grid-cols-3">
+      <ul className="grid grid-cols-4">
         {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
           <li key={to}>
             <NavLink
               to={to}
               end={end}
               className={({ isActive }) =>
-                [
-                  'flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors',
-                  'hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500',
-                  isActive ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-900',
-                ].join(' ')
+                `flex min-h-14 flex-col items-center justify-center gap-1 text-xs no-underline transition-colors ${
+                  isActive ? 'font-semibold text-brand-ink' : 'font-medium text-body hover:text-ink'
+                }`
               }
             >
-              <Icon className="h-5 w-5" aria-hidden="true" />
-              {label}
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`flex h-7.5 w-12 items-center justify-center rounded-full transition-colors ${
+                      isActive ? 'bg-brand-tint' : ''
+                    }`}
+                  >
+                    <Icon className="size-5" strokeWidth={1.9} aria-hidden="true" />
+                  </span>
+                  {label}
+                </>
+              )}
             </NavLink>
           </li>
         ))}

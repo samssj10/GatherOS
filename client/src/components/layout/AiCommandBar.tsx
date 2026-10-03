@@ -1,16 +1,14 @@
 import { Loader2, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAttendeeSummary } from '@/api/attendees';
 import { useBudgetSummary, useGenerateSchedule } from '@/api/schedule';
 
 const fieldClass =
-  'mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-500 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-60';
+  'mt-1 h-11 w-full rounded-xl border border-field bg-white px-3 text-sm text-ink placeholder:text-muted hover:bg-wash disabled:opacity-60';
 
-/** Sticky top bar: describe the offsite and Claude drafts an itinerary onto the calendar board. */
+/** Top bar of the dashboard: describe the offsite and Claude drafts an itinerary onto the board. */
 export default function AiCommandBar() {
-  const navigate = useNavigate();
   const generate = useGenerateSchedule();
   const summary = useAttendeeSummary().data;
   const budget = useBudgetSummary().data?.budget;
@@ -29,70 +27,70 @@ export default function AiCommandBar() {
     if (pending) return;
 
     const requested = Number.parseInt(attendees, 10);
-    generate.mutate(
-      {
-        prompt: prompt.trim(),
-        city: city.trim() || undefined,
-        days,
-        attendeeCount: Number.isFinite(requested) && requested > 0 ? requested : defaultAttendees,
-        budget,
-      },
-      { onSuccess: () => void navigate('/planner') },
-    );
+    generate.mutate({
+      prompt: prompt.trim(),
+      city: city.trim() || undefined,
+      days,
+      attendeeCount: Number.isFinite(requested) && requested > 0 ? requested : defaultAttendees,
+      budget,
+    });
   };
 
   return (
-    <header className="sticky top-0 z-10 border-b border-slate-200 bg-white px-6">
+    <header className="sticky top-0 z-10 border-b border-line bg-white px-8">
       <form
         role="search"
         aria-label="Generate itinerary with AI"
         aria-busy={pending}
         onSubmit={handleSubmit}
       >
-        <div className="mx-auto flex h-16 w-full max-w-3xl items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 py-4">
           <label htmlFor="ai-prompt" className="sr-only">
             Describe the offsite you want to plan
           </label>
-          <input
-            id="ai-prompt"
-            type="text"
-            required
-            minLength={3}
-            maxLength={500}
-            value={prompt}
-            onChange={(event) => setPrompt(event.target.value)}
-            disabled={pending}
-            placeholder="Describe your offsite, e.g. 3-day team retreat in Lisbon with a sailing day"
-            className="h-10 w-full rounded-full border border-slate-200 bg-white px-5 text-sm text-slate-900 placeholder:text-slate-500 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-60"
-          />
+          <div className="flex min-h-12 min-w-0 flex-[1_1_360px] items-center gap-2.5 rounded-[14px] border border-field bg-wash px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand">
+            <Sparkles className="size-4.5 shrink-0 text-brand" strokeWidth={1.8} aria-hidden="true" />
+            <input
+              id="ai-prompt"
+              type="text"
+              required
+              minLength={3}
+              maxLength={500}
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              disabled={pending}
+              placeholder="Describe your offsite, e.g. 3-day team retreat in Lisbon with a sailing day"
+              className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-muted disabled:opacity-60"
+            />
+          </div>
           <button
             type="button"
             onClick={() => setShowOptions((open) => !open)}
             aria-expanded={showOptions}
             aria-controls="ai-options"
             aria-label="Generation options"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            className="flex size-12 shrink-0 items-center justify-center rounded-[14px] border border-field bg-white text-body transition-colors hover:bg-wash"
           >
-            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            <SlidersHorizontal className="size-5" strokeWidth={1.8} aria-hidden="true" />
           </button>
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-indigo-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-70"
+            className="flex min-h-12 shrink-0 items-center gap-2 rounded-[14px] bg-brand px-5.5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-70"
           >
             {pending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <Loader2 className="size-4.5 animate-spin" strokeWidth={1.8} aria-hidden="true" />
             ) : (
-              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              <Sparkles className="size-4.5" strokeWidth={1.8} aria-hidden="true" />
             )}
-            {pending ? 'Generating…' : 'Generate'}
+            {pending ? 'Generating…' : 'Generate draft'}
           </button>
         </div>
 
         {showOptions && (
-          <div id="ai-options" className="mx-auto grid max-w-3xl grid-cols-3 gap-4 pb-4">
+          <div id="ai-options" className="grid grid-cols-3 gap-4 pb-4">
             <div>
-              <label htmlFor="ai-city" className="text-xs font-medium text-slate-500">
+              <label htmlFor="ai-city" className="text-xs font-medium text-muted">
                 City (optional)
               </label>
               <input
@@ -107,7 +105,7 @@ export default function AiCommandBar() {
               />
             </div>
             <div>
-              <label htmlFor="ai-days" className="text-xs font-medium text-slate-500">
+              <label htmlFor="ai-days" className="text-xs font-medium text-muted">
                 Days
               </label>
               <select
@@ -123,7 +121,7 @@ export default function AiCommandBar() {
               </select>
             </div>
             <div>
-              <label htmlFor="ai-attendees" className="text-xs font-medium text-slate-500">
+              <label htmlFor="ai-attendees" className="text-xs font-medium text-muted">
                 Attendees
               </label>
               <input

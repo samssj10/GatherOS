@@ -4,6 +4,7 @@ export const attendeeKeys = {
   list: ['attendees', 'list'] as const,
   detail: (id: string) => ['attendees', 'detail', id] as const,
   summary: ['attendees', 'summary'] as const,
+  departments: ['attendees', 'departments'] as const,
 };
 
 export const scheduleKeys = {

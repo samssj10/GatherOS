@@ -1,92 +1,107 @@
-import { useAttendee, useUpdateAttendee } from '@/api/attendees';
-import ErrorNotice from '@/components/ErrorNotice';
-import Skeleton from '@/components/Skeleton';
+import { Check, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useUpdateAttendee } from '@/api/attendees';
 import type { Attendee } from '@/types';
+import { XP } from '@/utils/gamification';
 
-type RsvpStatus = Attendee['rsvpStatus'];
-
-const STATUS_COPY: Record<RsvpStatus, { title: string; detail: string; tone: string }> = {
-  pending: {
-    title: 'Will you be joining us?',
-    detail: 'Let the organizers know so they can plan for you.',
-    tone: 'text-amber-700',
-  },
-  accepted: {
-    title: "You're going!",
-    detail: 'Your spot is confirmed. You can change your answer any time.',
-    tone: 'text-emerald-700',
-  },
-  declined: {
-    title: "You've declined",
-    detail: 'Changed your mind? You can still accept.',
-    tone: 'text-rose-700',
-  },
-};
-
-export default function RsvpCard({ attendeeId }: { attendeeId: string }) {
-  const { data: attendee, isPending, isError, refetch } = useAttendee(attendeeId);
-  const update = useUpdateAttendee(attendeeId);
-
-  if (isError) {
-    return <ErrorNotice message="Could not load your RSVP." onRetry={() => void refetch()} />;
-  }
-
-  if (isPending) {
-    return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="mt-6 h-12 w-full" />
-        <Skeleton className="mt-3 h-12 w-full" />
-      </div>
-    );
-  }
-
+/**
+ * RSVP as a quest. The headline reads the optimistic cache value, so it changes the instant a
+ * button is pressed; the toast arrives only after the server confirms.
+ */
+export default function RsvpCard({ attendee }: { attendee: Attendee }) {
+  const update = useUpdateAttendee(attendee.id);
   const status = attendee.rsvpStatus;
-  const copy = STATUS_COPY[status];
 
-  const choose = (next: RsvpStatus) => {
+  const choose = (next: Attendee['rsvpStatus']) => {
     if (next !== status) update.mutate({ rsvpStatus: next });
   };
 
   return (
     <section
-      aria-labelledby="rsvp-heading"
-      className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      aria-live="polite"
+      className="flex flex-col gap-3.5 rounded-3xl border border-line bg-white p-5"
     >
-      {/* The optimistic cache value drives this text, so it changes the instant a button is pressed. */}
-      <div aria-live="polite">
-        <h2 id="rsvp-heading" className={`text-xl font-bold tracking-tight ${copy.tone}`}>
-          {copy.title}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">{copy.detail}</p>
-      </div>
+      {status === 'accepted' && (
+        <>
+          <div className="flex items-center gap-3.5">
+            <span className="flex size-14 flex-none -rotate-8 items-center justify-center rounded-full border-2 border-dashed border-ok">
+              <span className="flex size-10.5 items-center justify-center rounded-full bg-ok text-white">
+                <Check className="size-5.5" strokeWidth={2.6} aria-hidden="true" />
+              </span>
+            </span>
+            <div>
+              <h2 id="rsvp-heading" className="font-display text-[22px] font-bold text-ok-ink">
+                You're going!
+              </h2>
+              <p className="mt-0.5 text-sm text-body">Spot confirmed · +{XP.rsvp} XP earned</p>
+            </div>
+          </div>
+          <Link
+            to="/attendee/schedule"
+            className="flex min-h-12.5 items-center justify-center gap-2 rounded-[14px] bg-brand text-base font-semibold text-white no-underline transition-colors hover:bg-brand-hover"
+          >
+            See your journey
+            <ChevronRight className="size-4.5" strokeWidth={2} aria-hidden="true" />
+          </Link>
+          <button
+            type="button"
+            onClick={() => choose('declined')}
+            className="min-h-11 text-sm text-body underline hover:text-ink"
+          >
+            Can't make it anymore?
+          </button>
+        </>
+      )}
 
-      <div className="mt-6 space-y-3">
-        <button
-          type="button"
-          aria-pressed={status === 'accepted'}
-          onClick={() => choose('accepted')}
-          className={`h-12 w-full rounded-lg text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-            status === 'accepted'
-              ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-              : 'border border-slate-200 bg-white text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          Accept RSVP
-        </button>
-        <button
-          type="button"
-          aria-pressed={status === 'declined'}
-          onClick={() => choose('declined')}
-          className={`h-12 w-full rounded-lg text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-            status === 'declined'
-              ? 'bg-rose-600 text-white hover:bg-rose-700'
-              : 'border border-slate-200 bg-white text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          Decline
-        </button>
-      </div>
+      {status === 'pending' && (
+        <>
+          <div>
+            <span className="rounded-md bg-brand-tint px-2 py-1 font-mono text-[11px] font-semibold text-brand-ink">
+              QUEST · +{XP.rsvp} XP
+            </span>
+            <h2 id="rsvp-heading" className="mt-2.5 mb-1 font-display text-2xl font-bold">
+              Are you in?
+            </h2>
+            <p className="text-[15px] leading-snug text-body">
+              Confirm your spot to unlock your schedule and start collecting stamps.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => choose('accepted')}
+            className="min-h-13 rounded-[14px] bg-brand text-base font-semibold text-white transition-colors hover:bg-brand-hover"
+          >
+            I'm in
+          </button>
+          <button
+            type="button"
+            onClick={() => choose('declined')}
+            className="min-h-12 rounded-[14px] border border-field bg-white text-[15px] font-medium transition-colors hover:bg-wash"
+          >
+            Can't make it
+          </button>
+        </>
+      )}
+
+      {status === 'declined' && (
+        <>
+          <div>
+            <h2 id="rsvp-heading" className="mb-1 font-display text-[22px] font-bold">
+              We'll miss you
+            </h2>
+            <p className="text-[15px] leading-snug text-body">
+              You've declined. Changed your mind? Your spot can still be saved.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => choose('accepted')}
+            className="min-h-13 rounded-[14px] bg-brand text-base font-semibold text-white transition-colors hover:bg-brand-hover"
+          >
+            Count me in
+          </button>
+        </>
+      )}
     </section>
   );
 }

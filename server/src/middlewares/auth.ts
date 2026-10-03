@@ -30,6 +30,15 @@ export const requireRole =
     next();
   };
 
+/** Only the signed-in attendee themselves (planners cannot act as an attendee). */
+export const requireSelf: RequestHandler = (req, res, next) => {
+  if (getSession(res).id === req.params.id) {
+    next();
+    return;
+  }
+  next(AppError.forbidden('You can only do this for yourself'));
+};
+
 /** Planners may act on any attendee; attendees only on their own record (`:id` param). */
 export const requireSelfOrPlanner: RequestHandler = (req, res, next) => {
   const session = getSession(res);

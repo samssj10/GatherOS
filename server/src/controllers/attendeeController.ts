@@ -22,6 +22,14 @@ export const updateAttendeeBodySchema = z
   .strict()
   .refine((body) => Object.keys(body).length > 0, 'At least one field is required');
 
+export const nudgeBodySchema = z
+  .object({ ids: z.array(z.string().regex(/^att-\d{4}$/)).min(1).max(2500).optional() })
+  .strict();
+
+export const stampBodySchema = z
+  .object({ sessionId: z.string().regex(/^[\w-]{1,60}$/, 'Invalid session id') })
+  .strict();
+
 export const listAttendees: RequestHandler = (_req, res) => {
   const query = res.locals.validated.query as z.infer<typeof listAttendeesQuerySchema>;
   res.json(attendeeService.listAttendees(query));
@@ -40,4 +48,19 @@ export const updateAttendee: RequestHandler = (_req, res) => {
   const { id } = res.locals.validated.params as z.infer<typeof attendeeParamsSchema>;
   const body = res.locals.validated.body as z.infer<typeof updateAttendeeBodySchema>;
   res.json(attendeeService.updateAttendee(id, body));
+};
+
+export const getDepartmentStats: RequestHandler = (_req, res) => {
+  res.json(attendeeService.getDepartmentStats());
+};
+
+export const nudgeAttendees: RequestHandler = (_req, res) => {
+  const { ids } = res.locals.validated.body as z.infer<typeof nudgeBodySchema>;
+  res.json(attendeeService.nudgeAttendees(ids));
+};
+
+export const addStamp: RequestHandler = (_req, res) => {
+  const { id } = res.locals.validated.params as z.infer<typeof attendeeParamsSchema>;
+  const { sessionId } = res.locals.validated.body as z.infer<typeof stampBodySchema>;
+  res.status(201).json(attendeeService.addStamp(id, sessionId));
 };

@@ -1,0 +1,164 @@
+import type { Attendee, AttendeeScheduleDTO } from '@/types';
+
+/** What each action is worth. */
+export const XP = { rsvp: 100, dietary: 50, flight: 75, stamp: 25 } as const;
+
+const TIERS = [
+  { min: 0, name: 'Newcomer' },
+  { min: 150, name: 'Trailblazer' },
+  { min: 300, name: 'Explorer' },
+  { min: 450, name: 'Legend' },
+] as const;
+
+export const DIETARY_LABELS: Record<Attendee['dietaryPreference'], string> = {
+  none: 'No restrictions',
+  vegetarian: 'Vegetarian',
+  vegan: 'Vegan',
+  'gluten-free': 'Gluten-free',
+};
+
+/** Sessions in the order they happen. */
+export function sortSessions(sessions: AttendeeScheduleDTO[]): AttendeeScheduleDTO[] {
+  return [...sessions].sort((a, b) => a.day - b.day || a.startTime.localeCompare(b.startTime));
+}
+
+/** Stamps that still match a session in the current itinerary (a replaced itinerary orphans old ones). */
+export function validStamps(attendee: Attendee, sessions: AttendeeScheduleDTO[]): Set<string> {
+  const ids = new Set(sessions.map((session) => session.id));
+  return new Set(attendee.stamps.filter((id) => ids.has(id)));
+}
+
+export function computeXp(attendee: Attendee, sessions: AttendeeScheduleDTO[]): number {
+  return (
+    (attendee.rsvpStatus === 'accepted' ? XP.rsvp : 0) +
+    (attendee.dietaryConfirmed ? XP.dietary : 0) +
+    (attendee.flightAssigned ? XP.flight : 0) +
+    validStamps(attendee, sessions).size * XP.stamp
+  );
+}
+
+export interface LevelInfo {
+  level: number;
+  rank: string;
+  xp: number;
+  /** Null at the top tier. */
+  next: { level: number; rank: string; xpToGo: number } | null;
+  /** 0 to 100 progress toward the next tier. */
+  pct: number;
+}
+
+export function levelInfo(xp: number): LevelInfo {
+  let index = 0;
+  TIERS.forEach((tier, i) => {
+    if (xp >= tier.min) index = i;
+  });
+  const current = TIERS[index];
+  const next = TIERS[index + 1];
+  return {
+    level: index + 1,
+    rank: current.name,
+    xp,
+    next: next ? { level: index + 2, rank: next.name, xpToGo: next.min - xp } : null,
+    pct: next ? Math.round(((xp - current.min) / (next.min - current.min)) * 100) : 100,
+  };
+}
+
+export interface Quest {
+  id: string;
+  label: string;
+  sub: string;
+  xp: number;
+  done: boolean;
+}
+
+export function buildQuests(attendee: Attendee, sessions: AttendeeScheduleDTO[]): Quest[] {
+  const accepted = attendee.rsvpStatus === 'accepted';
+  const first = sortSessions(sessions)[0];
+  const stamps = validStamps(attendee, sessions);
+  const firstStamped = first ? stamps.has(first.id) : false;
+
+  const quests: Quest[] = [
+    {
+      id: 'rsvp',
+      label: 'Confirm your RSVP',
+      sub: accepted ? 'Done' : 'Takes one tap',
+      xp: XP.rsvp,
+      done: accepted,
+    },
+    {
+      id: 'dietary',
+      label: 'Set dietary preference',
+      sub: attendee.dietaryConfirmed ? DIETARY_LABELS[attendee.dietaryPreference] : 'Takes one tap',
+      xp: XP.dietary,
+      done: attendee.dietaryConfirmed,
+    },
+    {
+      id: 'flight',
+      label: 'Book your flight',
+      sub: attendee.flightAssigned ? 'Booked' : 'Waiting on the travel team',
+      xp: XP.flight,
+      done: attendee.flightAssigned,
+    },
+  ];
+
+  if (first) {
+    quests.push({
+      id: 'checkin',
+      label: `Check in at ${first.sessionTitle}`,
+      sub: firstStamped ? 'Done' : accepted ? 'Ready when you arrive' : 'Unlocks after you RSVP',
+      xp: XP.stamp,
+      done: firstStamped,
+    });
+  }
+
+  return quests;
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  how: string;
+  earned: boolean;
+}
+
+/** True when there is at least one session in the group and every one of them is stamped. */
+function allStamped(group: AttendeeScheduleDTO[], stamps: Set<string>): boolean {
+  return group.length > 0 && group.every((session) => stamps.has(session.id));
+}
+
+export function buildBadges(attendee: Attendee, sessions: AttendeeScheduleDTO[]): Badge[] {
+  const stamps = validStamps(attendee, sessions);
+
+  return [
+    { id: 'early', name: 'Early Responder', how: 'Confirmed your RSVP', earned: attendee.rsvpStatus === 'accepted' },
+    { id: 'fuelled', name: 'Fuelled Up', how: 'Shared your dietary preference', earned: attendee.dietaryConfirmed },
+    { id: 'jetset', name: 'Jet Set', how: 'Booked your flight', earned: attendee.flightAssigned },
+    {
+      id: 'frontrow',
+      name: 'Front Row',
+      how: 'Stamp every keynote',
+      earned: allStamped(sessions.filter((s) => s.category === 'keynote'), stamps),
+    },
+    {
+      id: 'sealegs',
+      name: 'Sea Legs',
+      how: 'Stamp every activity',
+      earned: allStamped(sessions.filter((s) => s.category === 'activity'), stamps),
+    },
+    {
+      id: 'fullhouse',
+      name: 'Full House',
+      how: sessions.length > 0 ? `Collect all ${sessions.length} stamps` : 'Collect every stamp',
+      earned: allStamped(sessions, stamps),
+    },
+  ];
+}
+
+/** Badges a session counts toward, shown as hints on the journey. */
+export function badgeHints(session: AttendeeScheduleDTO, ordered: AttendeeScheduleDTO[]): string[] {
+  const hints: string[] = [];
+  if (session.category === 'keynote') hints.push('Front Row');
+  if (session.category === 'activity') hints.push('Sea Legs');
+  if (ordered.at(-1)?.id === session.id) hints.push('Full House');
+  return hints;
+}

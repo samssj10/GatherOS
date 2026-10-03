@@ -52,7 +52,69 @@ export function getAttendeeById(id: string): Attendee {
 export function updateAttendee(id: string, update: AttendeeUpdate): Attendee {
   const attendee = getAttendeeById(id);
   Object.assign(attendee, update);
+  // Choosing a dietary option, even 'none', is an answer.
+  if (update.dietaryPreference !== undefined) attendee.dietaryConfirmed = true;
   return attendee;
+}
+
+/** Records a check-in. Only attendees who are going can collect stamps; repeating one is harmless. */
+export function addStamp(attendeeId: string, sessionId: string): Attendee {
+  const attendee = getAttendeeById(attendeeId);
+  if (!db.schedule.some((item) => item.id === sessionId)) {
+    throw AppError.notFound(`Session ${sessionId} not found`);
+  }
+  if (attendee.rsvpStatus !== 'accepted') {
+    throw AppError.forbidden('Accept your RSVP to collect stamps');
+  }
+  if (!attendee.stamps.includes(sessionId)) attendee.stamps.push(sessionId);
+  return attendee;
+}
+
+/**
+ * Mock reminder: marks pending attendees as nudged. No message is actually sent. With no ids,
+ * every pending attendee is nudged. Attendees who already answered are skipped.
+ */
+export function nudgeAttendees(ids?: string[]): { nudged: number } {
+  const targets = ids
+    ? ids.map((id) => getAttendeeById(id))
+    : db.attendees.filter((attendee) => attendee.rsvpStatus === 'pending');
+
+  const now = new Date().toISOString();
+  let nudged = 0;
+  for (const attendee of targets) {
+    if (attendee.rsvpStatus !== 'pending') continue;
+    attendee.nudgedAt = now;
+    nudged += 1;
+  }
+  return { nudged };
+}
+
+export interface DepartmentStat {
+  department: string;
+  total: number;
+  accepted: number;
+  /** Whole-number percentage of the department that has accepted. */
+  pct: number;
+}
+
+/** Aggregate only: safe to show to any signed-in user because it holds no personal data. */
+export function getDepartmentStats(): DepartmentStat[] {
+  const byDepartment = new Map<string, { total: number; accepted: number }>();
+  for (const attendee of db.attendees) {
+    const entry = byDepartment.get(attendee.department) ?? { total: 0, accepted: 0 };
+    entry.total += 1;
+    if (attendee.rsvpStatus === 'accepted') entry.accepted += 1;
+    byDepartment.set(attendee.department, entry);
+  }
+
+  return [...byDepartment.entries()]
+    .map(([department, { total, accepted }]) => ({
+      department,
+      total,
+      accepted,
+      pct: Math.round((accepted / total) * 100),
+    }))
+    .sort((a, b) => b.pct - a.pct || a.department.localeCompare(b.department));
 }
 
 export function getAttendeeSummary(): AttendeeSummary {
