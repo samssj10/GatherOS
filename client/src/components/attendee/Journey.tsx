@@ -1,15 +1,14 @@
 import { Check, Clock, MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useCheckIn } from '@/api/attendees';
+import SessionCheckIn from '@/components/attendee/SessionCheckIn';
 import type { AttendeeProgress } from '@/hooks/useAttendeeProgress';
-import { badgeHints, XP } from '@/utils/gamification';
+import { badgeHints, badgeProgress, XP } from '@/utils/gamification';
 import { categoryLabel, categoryStyle } from '@/utils/format';
 
 /** Day tabs, the day's reward strip and the stop-by-stop timeline with check-in. */
 export default function Journey({ progress }: { progress: AttendeeProgress }) {
   const { attendee, sessions, stamps } = progress;
-  const checkIn = useCheckIn(attendee.id);
 
   const days = [...new Set(sessions.map((session) => session.day))].sort((a, b) => a - b);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -132,19 +131,16 @@ export default function Journey({ progress }: { progress: AttendeeProgress }) {
                       Counts toward {hint}
                     </span>
                   ))}
-                  {!stamped && (
-                    <button
-                      type="button"
-                      disabled={!accepted || checkIn.isPending}
-                      aria-describedby={accepted ? undefined : 'stamp-hint'}
-                      onClick={() => checkIn.mutate(session.id)}
-                      className="ml-auto min-h-11 rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-line disabled:text-muted"
-                    >
-                      Check in
-                      <span className="sr-only"> to {session.sessionTitle}</span>
-                    </button>
-                  )}
                 </div>
+
+                <SessionCheckIn
+                  session={session}
+                  attendeeId={attendee.id}
+                  accepted={accepted}
+                  stamped={stamped}
+                  progress={badgeProgress(session, sessions, stamps)}
+                  layout="phone"
+                />
               </article>
             </li>
           );

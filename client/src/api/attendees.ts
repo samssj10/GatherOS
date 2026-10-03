@@ -132,45 +132,6 @@ export function useCheckInWithCode(attendeeId: string) {
 }
 
 /**
- * Superseded by useCheckInWithCode: the server now requires a room code, so this no longer works.
- * Removed when the Journey switches over.
- */
-export function useCheckIn(attendeeId: string) {
-  const queryClient = useQueryClient();
-  const queryKey = attendeeKeys.detail(attendeeId);
-
-  return useMutation({
-    mutationFn: (sessionId: string) =>
-      apiFetch<Attendee>(`/attendees/${attendeeId}/stamps`, { method: 'POST', body: { sessionId } }),
-
-    onMutate: async (sessionId) => {
-      await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<Attendee>(queryKey);
-      if (previous && !previous.stamps.includes(sessionId)) {
-        queryClient.setQueryData<Attendee>(queryKey, {
-          ...previous,
-          stamps: [...previous.stamps, sessionId],
-        });
-      }
-      return { previous };
-    },
-
-    onError: (_error, _sessionId, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
-      useUiStore.getState().addToast('error', 'Could not check in. Please try again.');
-    },
-
-    onSuccess: () => {
-      useUiStore.getState().addToast('success', `Stamp collected. +${XP.stamp} XP`);
-    },
-
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey });
-    },
-  });
-}
-
-/**
  * Planner reminder. This is a mock: the server records who was nudged but sends nothing.
  * With no ids it targets every pending attendee.
  */
