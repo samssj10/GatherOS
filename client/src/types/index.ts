@@ -95,3 +95,16 @@ export interface DepartmentStat {
 export interface NudgeResult {
   nudged: number;
 }
+
+/** The rotating room code for one session, with live check-in numbers. Planner only. */
+export interface CheckInCodeInfo {
+  sessionId: string;
+  code: string;
+  /** ISO time the code changes. */
+  expiresAt: string;
+  /** The event clock's "now" when this was sent. */
+  serverTime: string;
+  status: AttendeeScheduleDTO['checkInStatus'];
+  checkedIn: number;
+  eligible: number;
+}

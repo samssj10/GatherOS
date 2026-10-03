@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Attendee, AttendeeScheduleDTO } from '@/types';
 import {
   badgeHints,
+  badgeProgress,
   buildBadges,
   buildQuests,
   computeXp,
@@ -119,6 +120,32 @@ describe('buildQuests', () => {
     expect(quest?.label).toBe('Check in at keynote-1');
     expect(quest?.sub).toBe('Unlocks after you RSVP');
   });
+
+  describe('check-in quest hint follows the first session and its clock', () => {
+    const hint = (a: Attendee, status: AttendeeScheduleDTO['checkInStatus']) =>
+      buildQuests(
+        a,
+        sessions.map((s) => (s.id === 'keynote-1' ? { ...s, checkInStatus: status } : s)),
+      ).find((entry) => entry.id === 'checkin')?.sub;
+    const going = attendee({ rsvpStatus: 'accepted' });
+
+    it('says when check-in opens while the session is upcoming', () => {
+      expect(hint(going, 'upcoming')).toBe('Opens at 09:00 on Day 1');
+    });
+
+    it('says it is happening now while the session is live', () => {
+      expect(hint(going, 'live')).toBe('Happening now');
+    });
+
+    it('says check-in closed once the session has ended', () => {
+      expect(hint(going, 'ended')).toBe('Check-in closed');
+    });
+
+    it('asks for an RSVP first, and is Done once stamped, whatever the clock says', () => {
+      expect(hint(attendee(), 'live')).toBe('Unlocks after you RSVP');
+      expect(hint(attendee({ rsvpStatus: 'accepted', stamps: ['keynote-1'] }), 'ended')).toBe('Done');
+    });
+  });
 });
 
 describe('buildBadges', () => {
@@ -161,5 +188,35 @@ describe('badgeHints', () => {
 
   it('marks the final session as counting toward Full House', () => {
     expect(badgeHints(ordered.at(-1)!, ordered)).toEqual(['Front Row', 'Full House']);
+  });
+});
+
+describe('badgeProgress', () => {
+  const ordered = sortSessions(sessions);
+
+  it('counts stamped keynotes toward Front Row', () => {
+    const stamps = new Set(['keynote-1']);
+    expect(badgeProgress(ordered[0]!, ordered, stamps)).toEqual([
+      { badge: 'Front Row', done: 1, total: 2, noun: 'keynotes' },
+    ]);
+  });
+
+  it('counts activities toward Sea Legs', () => {
+    const sailing = ordered.find((s) => s.id === 'sailing')!;
+    expect(badgeProgress(sailing, ordered, new Set(['sailing']))).toEqual([
+      { badge: 'Sea Legs', done: 1, total: 1, noun: 'activities' },
+    ]);
+  });
+
+  it('counts every session toward Full House on the final session', () => {
+    const progress = badgeProgress(ordered.at(-1)!, ordered, new Set(['keynote-1', 'keynote-2']));
+    expect(progress).toEqual([
+      { badge: 'Front Row', done: 2, total: 2, noun: 'keynotes' },
+      { badge: 'Full House', done: 2, total: 4, noun: 'sessions' },
+    ]);
+  });
+
+  it('has nothing to report for a session that counts toward no badge', () => {
+    expect(badgeProgress(ordered[1]!, ordered, new Set())).toEqual([]);
   });
 });

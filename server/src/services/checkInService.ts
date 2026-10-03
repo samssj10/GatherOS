@@ -13,6 +13,8 @@ export interface RoomCodeInfo {
   code: string;
   /** ISO time the code changes. */
   expiresAt: string;
+  /** The event clock's "now", so a countdown stays right even when the clock is pinned. */
+  serverTime: string;
   status: CheckInStatus;
   /** Attendees who have checked in to this session. */
   checkedIn: number;
@@ -43,6 +45,7 @@ export function getRoomCode(sessionId: string): RoomCodeInfo {
     sessionId: session.id,
     code,
     expiresAt: expiresAt.toISOString(),
+    serverTime: now.toISOString(),
     status: sessionCheckInStatus(session, now),
     checkedIn,
     eligible,

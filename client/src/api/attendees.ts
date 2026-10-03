@@ -102,7 +102,39 @@ export function useUpdateAttendee(id: string) {
   });
 }
 
-/** Check in to a session to collect its stamp. The stamp appears instantly and rolls back on failure. */
+export interface CheckInInput {
+  sessionId: string;
+  /** The code shown in the room, typed or scanned. */
+  code: string;
+}
+
+/**
+ * Check in to a live session with the room code. Unlike RSVP and dietary this is not optimistic:
+ * the server decides (code, clock, RSVP), so the stamp appears once it has said yes. A refusal
+ * arrives as an ApiError whose message is ready to show and whose code says why.
+ */
+export function useCheckInWithCode(attendeeId: string) {
+  const queryClient = useQueryClient();
+  const queryKey = attendeeKeys.detail(attendeeId);
+
+  return useMutation({
+    mutationFn: ({ sessionId, code }: CheckInInput) =>
+      apiFetch<Attendee>(`/attendees/${attendeeId}/stamps`, { method: 'POST', body: { sessionId, code } }),
+
+    onSuccess: (attendee) => {
+      queryClient.setQueryData<Attendee>(queryKey, attendee);
+    },
+
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey });
+    },
+  });
+}
+
+/**
+ * Superseded by useCheckInWithCode: the server now requires a room code, so this no longer works.
+ * Removed when the Journey switches over.
+ */
 export function useCheckIn(attendeeId: string) {
   const queryClient = useQueryClient();
   const queryKey = attendeeKeys.detail(attendeeId);

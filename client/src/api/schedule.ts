@@ -6,6 +6,7 @@ import { reflowDay } from '@/utils/reflow';
 import type {
   AttendeeScheduleDTO,
   BudgetSummary,
+  CheckInCodeInfo,
   GenerateScheduleInput,
   ScheduleItem,
 } from '@/types';
@@ -28,6 +29,21 @@ export function useMySchedule() {
   return useQuery({
     queryKey: scheduleKeys.mine,
     queryFn: ({ signal }) => apiFetch<AttendeeScheduleDTO[]>('/schedule/me', { signal }),
+    // Check-in opens and closes by the clock, so keep each session's status fresh.
+    refetchInterval: 30_000,
+  });
+}
+
+/** The code on the room screen. Polled so the code, countdown and check-in count stay live. */
+export function useCheckInCode(sessionId: string | undefined) {
+  return useQuery({
+    queryKey: scheduleKeys.checkInCode(sessionId ?? ''),
+    queryFn: ({ signal }) => apiFetch<CheckInCodeInfo>(`/schedule/${sessionId}/checkin-code`, { signal }),
+    enabled: sessionId !== undefined,
+    refetchInterval: 5_000,
+    // The code changes every minute: never show a cached one.
+    staleTime: 0,
+    gcTime: 0,
   });
 }
 

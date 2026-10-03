@@ -11,6 +11,7 @@ export const scheduleKeys = {
   planner: ['schedule', 'planner'] as const,
   mine: ['schedule', 'mine'] as const,
   budget: ['schedule', 'budget'] as const,
+  checkInCode: (sessionId: string) => ['schedule', 'checkin-code', sessionId] as const,
   // Cache-only: holds an unsaved AI draft (null = none). Never fetched from the server.
   draft: ['schedule', 'draft'] as const,
 };
