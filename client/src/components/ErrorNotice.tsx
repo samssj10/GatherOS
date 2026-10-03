@@ -5,12 +5,12 @@ interface Props {
 
 export default function ErrorNotice({ message, onRetry }: Props) {
   return (
-    <div role="alert" className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p className="text-sm font-semibold text-slate-900">{message}</p>
+    <div role="alert" className="rounded-2xl border border-line bg-white p-5">
+      <p className="text-sm font-semibold">{message}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="mt-4 inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-field bg-white px-4 text-sm font-semibold transition-colors hover:bg-wash"
       >
         Retry
       </button>

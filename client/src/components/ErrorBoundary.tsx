@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       <button
         type="button"
         onClick={this.reset}
-        className="inline-flex h-10 items-center rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        className="inline-flex min-h-11 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
       >
         Try again
       </button>
@@ -41,8 +41,8 @@ export default class ErrorBoundary extends Component<Props, State> {
 
     if (this.props.inline) {
       return (
-        <div role="alert" className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="font-semibold text-slate-900">This section failed to load.</p>
+        <div role="alert" className="rounded-2xl border border-line bg-white p-6">
+          <p className="font-semibold text-ink">This section failed to load.</p>
           <div className="mt-4">{button}</div>
         </div>
       );
@@ -51,10 +51,10 @@ export default class ErrorBoundary extends Component<Props, State> {
     return (
       <div
         role="alert"
-        className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center"
+        className="flex min-h-screen flex-col items-center justify-center gap-4 bg-canvas p-6 text-center"
       >
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Something went wrong</h1>
-        <p className="max-w-sm text-slate-500">
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">Something went wrong</h1>
+        <p className="max-w-sm text-body">
           An unexpected error occurred. You can try again, or reload the page if it keeps happening.
         </p>
         {button}

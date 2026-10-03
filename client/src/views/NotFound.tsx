@@ -1,15 +1,17 @@
-import { usePageTitle } from '@/hooks/usePageTitle';
 import { Link } from 'react-router-dom';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function NotFound() {
   usePageTitle('Page not found');
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Page not found</h1>
-      <p className="text-slate-500">The page you are looking for does not exist.</p>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-canvas p-6 text-center">
+      <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted">Error 404</p>
+      <h1 className="font-display text-4xl font-extrabold tracking-tight">Page not found</h1>
+      <p className="text-body">The page you are looking for does not exist.</p>
       <Link
         to="/"
-        className="inline-flex h-12 items-center rounded-lg bg-indigo-600 px-6 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        className="inline-flex min-h-12 items-center rounded-[14px] bg-brand px-6 text-sm font-semibold text-white no-underline transition-colors hover:bg-brand-hover"
       >
         Go home
       </Link>

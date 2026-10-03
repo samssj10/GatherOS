@@ -53,16 +53,26 @@ function seedAttendees(count: number): Attendee[] {
     const first = pick(rand, FIRST_NAMES);
     const last = pick(rand, LAST_NAMES);
     const number = String(i + 1).padStart(4, '0');
+    // Draw order matters: it must match the original seed so existing data stays identical.
+    const department = pick(rand, DEPARTMENTS);
+    const rsvpStatus = weightedRsvp(rand);
+    const dietaryPreference: Attendee['dietaryPreference'] =
+      rand() < 0.7 ? 'none' : pick(rand, DIETARY.slice(1));
+    const flightAssigned = rand() < 0.6;
 
     attendees.push({
       id: `att-${number}`,
       fullName: `${first} ${last}`,
       // The numeric suffix keeps emails unique across duplicate names.
       email: `${first}.${last}.${number}@example.com`.toLowerCase(),
-      department: pick(rand, DEPARTMENTS),
-      rsvpStatus: weightedRsvp(rand),
-      dietaryPreference: rand() < 0.7 ? 'none' : pick(rand, DIETARY.slice(1)),
-      flightAssigned: rand() < 0.6,
+      department,
+      rsvpStatus,
+      dietaryPreference,
+      flightAssigned,
+      // Anyone with a stated restriction has answered; 'none' counts as unanswered until chosen.
+      dietaryConfirmed: dietaryPreference !== 'none',
+      stamps: [],
+      nudgedAt: null,
     });
   }
 

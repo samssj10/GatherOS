@@ -2,7 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/api/client';
 import { attendeeKeys } from '@/api/keys';
 import { useUiStore } from '@/store/uiStore';
-import type { Attendee, AttendeeSummary, AttendeeUpdate, Paginated } from '@/types';
+import type {
+  Attendee,
+  AttendeeSummary,
+  AttendeeUpdate,
+  DepartmentStat,
+  NudgeResult,
+  Paginated,
+} from '@/types';
+import { XP } from '@/utils/gamification';
 
 /** The whole roster in one request; filtering and windowing happen on the client. */
 export function useAttendeeList() {
@@ -28,11 +36,19 @@ export function useAttendeeSummary() {
   });
 }
 
-function successMessage(update: AttendeeUpdate): string {
-  if (update.rsvpStatus === 'accepted') return 'RSVP accepted. See you there!';
-  if (update.rsvpStatus === 'declined') return 'RSVP declined. Sorry you can’t make it.';
-  if (update.rsvpStatus === 'pending') return 'RSVP reset to pending.';
-  return 'Dietary preference saved.';
+/** Department-level acceptance rates for the passport "team race". */
+export function useDepartmentStats() {
+  return useQuery({
+    queryKey: attendeeKeys.departments,
+    queryFn: ({ signal }) => apiFetch<DepartmentStat[]>('/attendees/departments', { signal }),
+  });
+}
+
+function invalidateAttendeeData(queryClient: ReturnType<typeof useQueryClient>, id: string) {
+  void queryClient.invalidateQueries({ queryKey: attendeeKeys.detail(id) });
+  void queryClient.invalidateQueries({ queryKey: attendeeKeys.summary });
+  void queryClient.invalidateQueries({ queryKey: attendeeKeys.list });
+  void queryClient.invalidateQueries({ queryKey: attendeeKeys.departments });
 }
 
 /**
@@ -51,7 +67,14 @@ export function useUpdateAttendee(id: string) {
       // Stop in-flight refetches from overwriting the optimistic value.
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<Attendee>(queryKey);
-      if (previous) queryClient.setQueryData<Attendee>(queryKey, { ...previous, ...update });
+      if (previous) {
+        queryClient.setQueryData<Attendee>(queryKey, {
+          ...previous,
+          ...update,
+          // Choosing a dietary option, even "none", counts as answering.
+          dietaryConfirmed: update.dietaryPreference !== undefined ? true : previous.dietaryConfirmed,
+        });
+      }
       return { previous };
     },
 
@@ -60,14 +83,81 @@ export function useUpdateAttendee(id: string) {
       useUiStore.getState().addToast('error', 'Could not save your change. Please try again.');
     },
 
-    onSuccess: (_saved, update) => {
-      useUiStore.getState().addToast('success', successMessage(update));
+    onSuccess: (_saved, update, context) => {
+      const { addToast } = useUiStore.getState();
+      if (update.rsvpStatus === 'accepted') {
+        const firstTime = context.previous?.rsvpStatus !== 'accepted';
+        addToast('success', `RSVP accepted. See you there!${firstTime ? ` +${XP.rsvp} XP` : ''}`);
+      } else if (update.rsvpStatus === 'declined') {
+        addToast('success', 'RSVP declined. Sorry you can’t make it.');
+      } else if (update.rsvpStatus === 'pending') {
+        addToast('success', 'RSVP reset to pending.');
+      } else {
+        const firstTime = context.previous?.dietaryConfirmed === false;
+        addToast('success', `Dietary preference saved.${firstTime ? ` +${XP.dietary} XP` : ''}`);
+      }
+    },
+
+    onSettled: () => invalidateAttendeeData(queryClient, id),
+  });
+}
+
+/** Check in to a session to collect its stamp. The stamp appears instantly and rolls back on failure. */
+export function useCheckIn(attendeeId: string) {
+  const queryClient = useQueryClient();
+  const queryKey = attendeeKeys.detail(attendeeId);
+
+  return useMutation({
+    mutationFn: (sessionId: string) =>
+      apiFetch<Attendee>(`/attendees/${attendeeId}/stamps`, { method: 'POST', body: { sessionId } }),
+
+    onMutate: async (sessionId) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Attendee>(queryKey);
+      if (previous && !previous.stamps.includes(sessionId)) {
+        queryClient.setQueryData<Attendee>(queryKey, {
+          ...previous,
+          stamps: [...previous.stamps, sessionId],
+        });
+      }
+      return { previous };
+    },
+
+    onError: (_error, _sessionId, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      useUiStore.getState().addToast('error', 'Could not check in. Please try again.');
+    },
+
+    onSuccess: () => {
+      useUiStore.getState().addToast('success', `Stamp collected. +${XP.stamp} XP`);
     },
 
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey });
-      void queryClient.invalidateQueries({ queryKey: attendeeKeys.summary });
+    },
+  });
+}
+
+/**
+ * Planner reminder. This is a mock: the server records who was nudged but sends nothing.
+ * With no ids it targets every pending attendee.
+ */
+export function useNudge() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ids?: string[]) =>
+      apiFetch<NudgeResult>('/attendees/nudge', { method: 'POST', body: ids ? { ids } : {} }),
+
+    onSuccess: ({ nudged }) => {
+      useUiStore
+        .getState()
+        .addToast('success', nudged === 1 ? 'Nudged 1 attendee.' : `Nudged ${nudged.toLocaleString()} attendees.`);
       void queryClient.invalidateQueries({ queryKey: attendeeKeys.list });
+    },
+
+    onError: () => {
+      useUiStore.getState().addToast('error', 'Could not send the nudge. Please try again.');
     },
   });
 }

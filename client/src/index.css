@@ -1,14 +1,75 @@
 @import 'tailwindcss';
 @config '../tailwind.config.js';
 
+/*
+ * Design tokens from the GatherOS redesign. Components use these names (bg-ink, text-muted,
+ * text-brand-ink, ...) instead of raw hex values.
+ */
+@theme {
+  --font-sans: 'Geist Sans', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  /* Surfaces */
+  --color-canvas: #f3f4f8;
+  --color-sunken: #e9ebf2;
+  --color-line: #e3e5ee;
+  --color-hairline: #eef0f5;
+  --color-wash: #f8f8fb;
+  --color-field: #dadde8;
+
+  /* Text */
+  --color-ink: #14161f;
+  --color-body: #4a4f63;
+  --color-muted: #5f6478;
+
+  /* Dark surfaces (sidebar, hero cards) */
+  --color-ink-raised: #1e2130;
+  --color-ink-active: #262938;
+  --color-ink-line: #2e3242;
+  --color-ink-track: #3a3f52;
+  --color-ink-text: #b9bdcc;
+  --color-ink-text-2: #c9ccd8;
+  --color-ink-text-3: #9ea3b5;
+
+  /* Brand and accent */
+  --color-brand: #5b3df5;
+  --color-brand-hover: #4a2ee0;
+  --color-brand-ink: #4024d6;
+  --color-brand-deep: #2a1599;
+  --color-brand-tint: #eeebff;
+  --color-lime: #c6f432;
+
+  /* Status */
+  --color-ok: #0e9c7a;
+  --color-ok-ink: #04745a;
+  --color-ok-tint: #ddf6ee;
+  --color-warn: #f2b266;
+  --color-warn-ink: #a04300;
+  --color-warn-tint: #fff1e0;
+  --color-bad: #d9465e;
+  --color-bad-ink: #c21f3a;
+  --color-bad-tint: #fde6ea;
+
+  /* Session categories (keynote uses the brand colors) */
+  --color-blue: #2f7bea;
+  --color-blue-ink: #0b5cc2;
+  --color-blue-tint: #e3f0ff;
+  --color-orange: #e8761b;
+  --color-orange-tint: #ffeedf;
+}
+
 @layer base {
-  body {
-    @apply bg-slate-50 font-sans text-slate-900 antialiased;
+  html {
+    @apply bg-canvas;
   }
 
-  h1,
-  h2,
-  h3 {
-    @apply font-bold tracking-tight;
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+  }
+
+  /* Visible keyboard focus everywhere, in the brand color. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand;
   }
 }

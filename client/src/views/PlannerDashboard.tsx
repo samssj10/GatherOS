@@ -1,35 +1,61 @@
-import { usePageTitle } from '@/hooks/usePageTitle';
-import BudgetTracker from '@/components/planner/BudgetTracker';
+import AiCommandBar from '@/components/layout/AiCommandBar';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import BudgetCard from '@/components/planner/BudgetCard';
 import CalendarBoard from '@/components/planner/CalendarBoard';
 import DraftBanner from '@/components/planner/DraftBanner';
-import RsvpSummary from '@/components/planner/RsvpSummary';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import MilestonesCard from '@/components/planner/MilestonesCard';
+import ReadinessCard from '@/components/planner/ReadinessCard';
+import RsvpOverview from '@/components/planner/RsvpOverview';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePlannerProgress } from '@/hooks/usePlannerProgress';
 
 export default function PlannerDashboard() {
-  usePageTitle('Dashboard');
+  usePageTitle('Mission control');
+  const sessionCount = usePlannerProgress().numbers?.items.length;
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Dashboard</h1>
-        <p className="text-sm text-slate-500">Budget, responses and the three-day itinerary at a glance.</p>
-      </div>
+    <>
+      <ErrorBoundary inline>
+        <AiCommandBar />
+      </ErrorBoundary>
 
-      <DraftBanner />
+      <div className="flex w-full max-w-310 flex-col gap-6 p-8">
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted">
+              Company offsite · 3 days{sessionCount !== undefined ? ` · ${sessionCount} sessions` : ''}
+            </p>
+            <h1 className="mt-1.5 font-display text-[40px] leading-tight font-extrabold tracking-[-0.02em]">
+              Mission control
+            </h1>
+          </div>
+          <p className="text-[15px] text-body">Budget, responses and the itinerary at a glance.</p>
+        </header>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2">
+        <DraftBanner />
+
+        <div className="flex flex-wrap gap-5">
           <ErrorBoundary inline>
-            <BudgetTracker />
+            <ReadinessCard />
+          </ErrorBoundary>
+          <ErrorBoundary inline>
+            <MilestonesCard />
           </ErrorBoundary>
         </div>
+
+        <div className="flex flex-wrap gap-5">
+          <ErrorBoundary inline>
+            <BudgetCard />
+          </ErrorBoundary>
+          <ErrorBoundary inline>
+            <RsvpOverview />
+          </ErrorBoundary>
+        </div>
+
         <ErrorBoundary inline>
-          <RsvpSummary />
+          <CalendarBoard />
         </ErrorBoundary>
       </div>
-
-      <ErrorBoundary inline>
-        <CalendarBoard />
-      </ErrorBoundary>
-    </div>
+    </>
   );
 }

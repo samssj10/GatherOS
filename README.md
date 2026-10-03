@@ -2,61 +2,78 @@
 
 [![CI](https://github.com/samssj10/GatherOS/actions/workflows/ci.yml/badge.svg)](https://github.com/samssj10/GatherOS/actions/workflows/ci.yml)
 
-**A multi-sided corporate offsite platform.** Event planners build and budget an itinerary on a dense desktop dashboard, with AI-generated drafts from Claude. Attendees get a mobile-first view to see the schedule, RSVP in one tap and set dietary preferences. Both personas run from a single React app on top of a Node.js backend-for-frontend (BFF).
+**A multi-sided corporate offsite platform, designed as a game.** Planners run their offsite from a "mission control" dashboard: milestones, a host rank, a budget breakdown and an AI-drafted, drag-and-drop itinerary. Attendees get a mobile-first companion where RSVPing, picking a meal and checking in at sessions earns XP, stamps and badges. Both personas run from one React app on a Node.js backend-for-frontend (BFF), with itineraries drafted by Claude.
 
 <p align="center">
-  <img src="docs/screenshots/planner-dashboard.png" alt="Planner dashboard with a budget tracker, RSVP totals and a three-day itinerary board" width="900">
+  <img src="docs/screenshots/planner-dashboard.png" alt="Planner dashboard: readiness hero, milestones, budget by category, RSVP overview and a three-day itinerary board" width="900">
   <br>
-  <sub><b>Planner dashboard:</b> budget, RSVP totals and the drag-and-drop itinerary board</sub>
+  <sub><b>Mission control:</b> milestones, budget by category, RSVPs and the drag-and-drop itinerary</sub>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/planner-roster.png" alt="Virtualized roster of 2,500 attendees with search and an RSVP filter" width="900">
+  <img src="docs/screenshots/planner-roster.png" alt="Virtualized roster of 2,500 attendees with response filters, a Half House banner and a Trip ready meter" width="900">
   <br>
-  <sub><b>Attendee roster:</b> 2,500 people, searchable and filterable, virtualized</sub>
+  <sub><b>Roster:</b> 2,500 attendees, filterable, with a "Trip ready" meter and one-click nudges</sub>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/attendee-mobile.png" alt="Attendee mobile app: RSVP screen on the left, vertical schedule timeline on the right" width="640">
+  <img src="docs/screenshots/attendee-mobile.png" alt="Attendee mobile app: home with level and quests, the journey timeline with stamps, and the passport with badges" width="900">
   <br>
-  <sub><b>Attendee view (mobile):</b> one-tap RSVP and a vertical schedule timeline</sub>
+  <sub><b>Attendee app:</b> level and quests, the journey with check-in stamps, and the passport</sub>
 </p>
 
 ## Features
 
 ### For planners (desktop)
 
-- **AI itinerary drafts.** Describe the offsite in a prompt, optionally set the city, number of days and attendee count, and Claude returns a structured itinerary. The draft appears on the board as *unsaved*, with the budget recalculated, until you save it or discard it.
-- **Drag-and-drop calendar.** A three-day board where sessions can be reordered within a day or dropped onto another day, by mouse or keyboard (Space, arrow keys, Space). A marker shows where a card will land. Every card also has up, down, previous-day and next-day buttons as a non-drag alternative.
-- **Automatic re-timing.** After any reorder or move, the affected day is re-timed so sessions run back to back, 15 minutes apart, each keeping its own duration. No AI involved, just arithmetic (see below).
-- **Budget tracker.** Planned spend against the total budget, with a progress bar that turns amber and then rose as the budget is consumed.
-- **Virtualized roster.** All 2,500 attendees are searchable and filterable by RSVP status, yet only about 20 rows exist in the DOM at any time.
-- **RSVP overview.** Live accepted, pending and declined totals.
+- **Mission control.** A readiness hero tells you the one thing to do next ("14 more yeses to fill half the house"), backed by four milestones: plan all three days, keep spend under half the budget, reach Half House (half the invitees accepted) and get everyone to answer. Completing them raises your **host rank**, shown in the sidebar.
+- **AI itinerary drafts.** Describe the offsite, optionally set the city, days and attendee count, and Claude returns a structured itinerary. It lands on the board as an *unsaved draft*; milestones, rank and budget recalculate for it until you save or discard it.
+- **Drag-and-drop itinerary.** Reorder sessions within a day or drop them onto another day, by mouse or keyboard. Every card also has up, down, previous-day and next-day buttons. After any move the affected day is re-timed automatically so sessions run back to back, 15 minutes apart, each keeping its own duration.
+- **Budget breakdown.** A stacked bar by category (meals, activities, workshops, keynotes) with an "on track", "close to the limit" or "over budget" status.
+- **RSVP overview.** Accepted, pending and declined totals with a Half House marker.
+- **Virtualized roster.** All 2,500 attendees, searchable and filterable by response, with only about 20 rows in the DOM at any time. A **Trip ready** meter shows who has answered, accepted and booked a flight, and **Nudge** reminds pending attendees one at a time or all at once.
 
 ### For attendees (mobile-first)
 
-- **One-tap RSVP** with an optimistic UI: the screen responds instantly and rolls back if the save fails.
-- **Vertical timeline** of the schedule, grouped by day, with RSVP-required sessions flagged.
-- **Dietary preferences** (none, vegetarian, vegan, gluten-free) saved instantly.
-- Generous touch targets (at least 48px) and a sticky bottom navigation bar.
+- **Home.** Level, rank and XP at a glance. The RSVP is a quest ("Are you in?") with an optimistic UI that responds instantly and rolls back on failure. A pre-trip checklist and a "first stop" teaser follow.
+- **Journey.** Day tabs and a stop-by-stop timeline. **Check in** at a session to collect its stamp and XP.
+- **Passport.** Your stamps, six badges (Early Responder, Fuelled Up, Jet Set, Front Row, Sea Legs, Full House) and a **team race** showing the share of each department that is going.
+- **Dietary quest.** Four large options, saved instantly, with a "Meals on this trip" list.
+- Touch targets of at least 44px and a four-tab bottom navigation.
 
 ### Platform
 
-- Role-based access: planners and attendees see different routes and different API permissions.
-- Accessibility audited with axe-core (0 violations across every screen), skip link, live regions and per-page titles.
-- A Playwright end-to-end journey with network interception, run in CI on every push.
+- Role-based access: planners and attendees see different routes and have different API permissions.
+- Accessibility audited with axe-core: 0 violations across every screen, including the richer states (drafts, stamps, nudges). Skip link, live regions, per-page titles and keyboard alternatives for every drag.
+- Unit tests for the business rules, plus a Playwright end-to-end journey with network interception, all run in CI on every push.
+
+## How the game works
+
+All of this is derived from real data; nothing is hard-coded to the demo.
+
+| Action | XP |
+| --- | --- |
+| Accept your RSVP | 100 |
+| Set your dietary preference (any option counts, including "no restrictions") | 50 |
+| Flight booked by the travel team | 75 |
+| Each session you check in to | 25 |
+
+Levels: Newcomer (0 XP), Trailblazer (150), Explorer (300), Legend (450). Badges are earned from those actions; Front Row, Sea Legs and Full House mean stamping every keynote, every activity and every session, so they adapt to whatever itinerary exists. Only attendees who are going can collect stamps.
+
+Planner ranks follow completed milestones: Scout (0), Pathfinder (1), Trail Builder (2), Trailblazer (3), Summit Host (4).
 
 ## Tech stack
 
 | Layer | Technology |
 | --- | --- |
-| Client | React 19, Vite, TypeScript (strict), Tailwind CSS v4, React Router, Lucide icons |
+| Client | React 19, Vite, TypeScript (strict), Tailwind CSS v4 with design tokens, React Router, Lucide icons |
+| Typography | Bricolage Grotesque (headings), Geist (text) and Geist Mono (labels), self-hosted through Fontsource |
 | Server state | TanStack Query v5 |
 | Client UI state | Zustand (ephemeral UI state only: toasts and roster filters) |
-| Performance and interaction | `@tanstack/react-virtual`, `@dnd-kit/core` |
+| Performance and interaction | `@tanstack/react-virtual`, `@dnd-kit` |
 | BFF | Node.js, Express 5, TypeScript, zod, helmet, pino, express-rate-limit |
 | AI | Anthropic Claude via the official SDK, using structured JSON output |
-| Quality | Playwright, ESLint, Husky and lint-staged, GitHub Actions |
+| Quality | Vitest, Playwright, ESLint, Husky and lint-staged, GitHub Actions |
 
 ## Architecture
 
@@ -75,14 +92,15 @@ flowchart LR
 
 **Server.** Requests flow `route -> controller -> service`. Controllers only translate HTTP; business logic and every external call live in `services/`. All request bodies, query strings and params are validated with zod. A single `AppError` class and a global error handler return consistent JSON errors and never leak stack traces. Logs are structured (pino) with PII fields such as email and name redacted, and token usage is logged for each AI call.
 
-**Client.** There is a strict boundary between two kinds of state. Anything fetched from the BFF lives in TanStack Query and is never copied elsewhere. Zustand holds only UI state that has no server counterpart. Pages and layouts are route-split with `React.lazy`.
+**Client.** There is a strict boundary between two kinds of state. Anything fetched from the BFF lives in TanStack Query and is never copied elsewhere. Zustand holds only UI state that has no server counterpart. Pages and layouts are route-split with `React.lazy`. Colors, fonts and radii are design tokens defined once in `index.css` and used by name (`bg-ink`, `text-brand-ink`, `font-display`).
 
 ### Design decisions worth knowing
 
-- **Optimistic updates with rollback.** RSVP, dietary and drag-and-drop moves update the cache immediately, restore the previous value on error, and confirm with a toast only after the server answers.
-- **AI drafts live in a cache-only query.** The unsaved draft is stored under a TanStack Query key with `skipToken`, so it is never refetched. A window refocus cannot overwrite it with the saved itinerary. Moving cards inside a draft is purely local, and nothing reaches the server until the planner clicks *Save*.
+- **Game rules are pure functions.** XP, levels, quests, badges, milestones and host ranks live in `client/src/utils/` as plain, tested functions over data the app already fetches. There is no separate "progress" service to keep in sync.
+- **Optimistic updates with rollback.** RSVP, dietary, check-in and itinerary moves update the cache immediately, restore the previous value on error, and confirm with a toast only after the server answers.
+- **Re-timing is deterministic and shared.** The rule lives in one small pure function, `reflowDay`, on the server and mirrored on the client. The client copy makes the board update instantly; the server's answer then replaces it, so the two cannot silently drift apart. Both copies are unit tested.
+- **AI drafts live in a cache-only query.** The unsaved draft is stored under a TanStack Query key with `skipToken`, so it is never refetched. A window refocus cannot overwrite it with the saved itinerary, and moving cards inside a draft is purely local until the planner clicks *Save*.
 - **Model output is not trusted.** Even with structured outputs, Claude's response is re-validated with the same zod schema used by the save endpoint, and its IDs are replaced with unique ones.
-- **Re-timing is deterministic and shared.** The rule lives in one small pure function, `reflowDay`, on the server and mirrored on the client. The client copy makes the board update instantly; the server's answer then replaces it, so the two can never silently drift apart.
 - **Sessions are signed cookies.** The session is an HMAC-signed token in an `HttpOnly`, `SameSite=Strict` cookie (`Secure` in production), verified with a constant-time comparison.
 
 ## Getting started
@@ -130,7 +148,7 @@ This starts the BFF on <http://localhost:3000> and the client on <http://localho
 
 ### Demo accounts
 
-Sign-in is passwordless and uses mock data, so only the email is needed. The login page has shortcut buttons for both.
+Sign-in is passwordless and uses mock data, so only the email is needed. The sign-in page has shortcut cards for both.
 
 | Role | Email |
 | --- | --- |
@@ -177,7 +195,9 @@ Run from the repository root.
 | `npm run build` | Build the client and the server |
 | `npm run lint` | ESLint for the client and the server |
 | `npm run typecheck` | `tsc --noEmit` for the client, server and e2e suite |
+| `npm run test:unit` | Vitest unit tests for the client and the server |
 | `npm run test:e2e` | Run the Playwright end-to-end suite |
+| `npm test` | Unit tests, then end-to-end tests |
 
 A Husky pre-commit hook runs ESLint and `tsc --noEmit` on staged files through lint-staged.
 
@@ -193,8 +213,11 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 | `POST /auth/logout` | public | Clears the session cookie |
 | `GET /attendees` | planner | Paginated roster. Query: `page`, `limit` (max 2500), `search`, `rsvpStatus`, `department` |
 | `GET /attendees/summary` | planner | RSVP, dietary and flight totals |
-| `GET /attendees/:id` | self or planner | One attendee |
+| `GET /attendees/departments` | signed in | Share of each department that has accepted (aggregate only, no personal data) |
+| `POST /attendees/nudge` | planner | Mock reminder. Body `{ ids? }`; with no ids, every pending attendee. Records the nudge and sends nothing |
+| `GET /attendees/:id` | self or planner | One attendee, including `dietaryConfirmed`, `stamps` and `nudgedAt` |
 | `PATCH /attendees/:id` | self or planner | Update `rsvpStatus` and/or `dietaryPreference` |
+| `POST /attendees/:id/stamps` | self only | Body `{ sessionId }`. Check in to a session. Only attendees who are going can collect stamps |
 | `GET /schedule` | planner | Full itinerary |
 | `GET /schedule/me` | signed in | Attendee-shaped itinerary (`AttendeeScheduleDTO[]`) |
 | `GET /schedule/budget` | planner | Budget, estimated spend and remaining |
@@ -204,13 +227,15 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 
 ## Testing and CI
 
-The end-to-end journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the whole product in one run:
+**Unit tests (Vitest, 58 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status. Run them with `npm run test:unit`.
+
+**End-to-end (Playwright).** The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the whole product in one run:
 
 1. Inject a signed planner cookie to bypass the login screen.
 2. Intercept `POST /api/ai/generate-schedule` with `page.route()` and return a hardcoded valid response.
 3. Assert the three-column board renders the mocked sessions in the right days.
 4. Clear cookies, inject an attendee cookie and reload.
-5. Delay the RSVP request by 500 ms, click *Accept RSVP*, assert the UI updates before the response arrives, then assert the success toast.
+5. Delay the RSVP request by 500 ms, click *I'm in*, assert the UI updates before the response arrives, then assert the success toast.
 
 The suite starts its own BFF and client on separate ports (3100 and 5273), so it never collides with `npm run dev`. It needs no `.env` file and no API key, because the AI call is mocked and the AI key is blanked on purpose.
 
@@ -219,22 +244,23 @@ npx playwright install chromium   # first run only
 npm run test:e2e
 ```
 
-GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)) runs on every push and pull request with two jobs: **Typecheck and lint** (`tsc --noEmit` and ESLint) and **Playwright** (the journey above, with the HTML report uploaded as an artifact).
+GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)) runs on every push and pull request with two jobs: **Typecheck and lint** (`tsc --noEmit`, ESLint and the unit tests) and **Playwright** (the journey above, with the HTML report uploaded as an artifact).
 
 ## Project structure
 
 ```
 GatherOS/
-├── .github/workflows/ci.yml     # Typecheck, lint and Playwright
+├── .github/workflows/ci.yml     # Typecheck, lint, unit tests and Playwright
 ├── .husky/                      # Pre-commit hook (lint-staged)
 ├── client/                      # React SPA
 │   └── src/
 │       ├── api/                 # TanStack Query hooks and the BFF fetch client
 │       ├── components/          # UI widgets (layout, planner, attendee)
 │       ├── context/             # Auth context
-│       ├── hooks/               # Custom hooks
+│       ├── hooks/               # Custom hooks (auth, planner and attendee progress)
 │       ├── store/               # Zustand store (UI state only)
 │       ├── types/               # Shared domain models
+│       ├── utils/               # Pure rules: re-timing, XP and badges, milestones (with tests)
 │       └── views/               # Route-level pages (lazy-loaded)
 ├── server/                      # Express BFF
 │   └── src/
@@ -242,7 +268,7 @@ GatherOS/
 │       ├── middlewares/         # Auth, validation, rate limiting, error handling
 │       ├── routes/              # Router definitions
 │       ├── services/            # Business logic, mock database, Claude calls
-│       └── utils/               # AppError, logger, env parsing, schemas
+│       └── utils/               # AppError, logger, env parsing, schemas, re-timing
 ├── e2e/                         # Playwright suite and helpers
 ├── docs/screenshots/            # Images used in this README
 └── package.json                 # Root scripts
@@ -250,8 +276,11 @@ GatherOS/
 
 ## Known limitations
 
-- **No persistent database.** Data lives in server memory and resets on every restart: the 2,500 attendees, the itinerary and any saved changes.
+- **No persistent database.** Data lives in server memory and resets on every restart: the 2,500 attendees, the itinerary, stamps and nudges.
 - **Mock authentication.** Sign-in is passwordless and exists for demonstration. Replace it with a real identity provider before any real use.
-- **Reordering collapses gaps.** Re-timing packs a day back to back with 15-minute gaps, so any longer gaps (a lunch break, free time) are closed up when you reorder that day. The day starts at the same time it did before. A move to another day re-times only the destination day, and the day it left is left as it was. A reorder that would push a day past midnight is refused.
+- **Nudges send nothing.** The server records who was nudged and the roster shows it, but no email or message goes out.
+- **Check-in is always open.** There are no real event dates, so attendees can check in to any session at any time once they have accepted. A real deployment would unlock each session at its start time.
+- **XP is computed in the browser.** It is derived from data the server owns, so it cannot be spoofed to gain access, but a leaderboard that matters would need server-side scoring.
+- **Replacing the itinerary orphans old stamps.** Saving a new AI itinerary gives sessions new ids, so earlier check-ins stop counting.
+- **Reordering collapses gaps.** Re-timing packs a day back to back with 15-minute gaps, so any longer gaps (a lunch break, free time) are closed up when you reorder that day. A move to another day re-times only the destination day, and a reorder that would push a day past midnight is refused.
 - **Single event, three days.** The data model and UI are built around one offsite of up to three days.
-- **No unit tests yet.** Coverage today is the end-to-end journey plus static checks (types and lint).

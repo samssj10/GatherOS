@@ -4,11 +4,19 @@ import {
   KeyboardSensor,
   PointerSensor,
   closestCorners,
+  pointerWithin,
   useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import type { Active, DragEndEvent, DragMoveEvent, DragStartEvent, Over } from '@dnd-kit/core';
+import type {
+  Active,
+  CollisionDetection,
+  DragEndEvent,
+  DragMoveEvent,
+  DragStartEvent,
+  Over,
+} from '@dnd-kit/core';
 import {
   SortableContext,
   arrayMove,
@@ -42,7 +50,16 @@ const LAST_DAY = DAYS[DAYS.length - 1];
 const COLUMN_PREFIX = 'day-';
 
 const cardActionClass =
-  'flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-30';
+  'flex size-8 items-center justify-center rounded-lg bg-canvas text-ink transition-colors hover:bg-line disabled:pointer-events-none disabled:opacity-35';
+
+/**
+ * Mouse and touch drops follow the pointer: whichever card (or empty column space) it is over wins.
+ * Keyboard dragging has no pointer, so it falls back to the nearest corners.
+ */
+const collisionDetection: CollisionDetection = (args) => {
+  const underPointer = pointerWithin(args);
+  return underPointer.length > 0 ? underPointer : closestCorners(args);
+};
 
 const byStartTime = (a: ScheduleItem, b: ScheduleItem) => a.startTime.localeCompare(b.startTime);
 
@@ -113,23 +130,25 @@ function CardBody({ item, handle, actions }: { item: ScheduleItem; handle?: Reac
 
   return (
     <>
-      <div className="flex items-start gap-2">
-        {handle}
-        <h3 className="min-w-0 flex-1 text-sm font-bold tracking-tight text-slate-900">{item.title}</h3>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${style.badge}`}>
+      <div className="flex items-start gap-2.5">
+        {handle ?? <span className="size-6 shrink-0" aria-hidden="true" />}
+        <h3 className="min-w-0 flex-1 text-base leading-snug font-semibold">{item.title}</h3>
+        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${style.badge}`}>
           {categoryLabel(item.category)}
         </span>
       </div>
-      <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
-        <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-        {item.startTime} – {item.endTime}
-      </p>
-      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
-        <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-        {item.location}
-      </p>
-      <div className="mt-3 flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-900">{formatCurrency(item.costEstimate)}</p>
+      <div className="flex flex-wrap gap-x-3.5 gap-y-1.5 pl-8.5 text-[13px] text-body">
+        <span className="inline-flex items-center gap-1.5">
+          <Clock className="size-3.5" strokeWidth={2} aria-hidden="true" />
+          {item.startTime} – {item.endTime}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <MapPin className="size-3.5" strokeWidth={2} aria-hidden="true" />
+          {item.location}
+        </span>
+      </div>
+      <div className="flex items-center justify-between pl-8.5">
+        <span className="font-mono text-sm font-semibold">{formatCurrency(item.costEstimate)}</span>
         {actions}
       </div>
     </>
@@ -157,7 +176,7 @@ function ScheduleCard({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       data-testid="schedule-card"
       data-item-id={item.id}
-      className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:bg-slate-50 hover:shadow-md ${
+      className={`flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-sm transition-shadow hover:shadow-md ${
         isDragging ? 'opacity-40' : ''
       }`}
     >
@@ -169,16 +188,16 @@ function ScheduleCard({
             ref={setActivatorNodeRef}
             aria-label={`Drag ${item.title} to reorder or move`}
             data-testid="drag-handle"
-            className="-ml-1 mt-px flex h-6 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:cursor-grabbing"
+            className="-ml-1 flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted transition-colors hover:bg-canvas hover:text-ink active:cursor-grabbing"
             {...listeners}
             {...attributes}
           >
-            <GripVertical className="h-4 w-4" aria-hidden="true" />
+            <GripVertical className="size-4" aria-hidden="true" />
           </button>
         }
         actions={
           // Click alternatives to dragging, for keyboard and assistive-technology users.
-          <div className="flex items-center">
+          <div className="flex gap-0.5">
             <button
               type="button"
               disabled={isFirst}
@@ -186,7 +205,7 @@ function ScheduleCard({
               aria-label={isFirst ? `${item.title} is already first on Day ${item.day}` : `Move ${item.title} earlier on Day ${item.day}`}
               className={cardActionClass}
             >
-              <ChevronUp className="h-4 w-4" aria-hidden="true" />
+              <ChevronUp className="size-4" strokeWidth={2} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -195,7 +214,7 @@ function ScheduleCard({
               aria-label={isLast ? `${item.title} is already last on Day ${item.day}` : `Move ${item.title} later on Day ${item.day}`}
               className={cardActionClass}
             >
-              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              <ChevronDown className="size-4" strokeWidth={2} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -208,7 +227,7 @@ function ScheduleCard({
               }
               className={cardActionClass}
             >
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              <ChevronLeft className="size-4" strokeWidth={2} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -221,7 +240,7 @@ function ScheduleCard({
               }
               className={cardActionClass}
             >
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              <ChevronRight className="size-4" strokeWidth={2} aria-hidden="true" />
             </button>
           </div>
         }
@@ -231,7 +250,16 @@ function ScheduleCard({
 }
 
 function DropIndicator() {
-  return <li aria-hidden="true" data-testid="drop-indicator" className="h-1.5 rounded-full bg-indigo-500" />;
+  return <li aria-hidden="true" data-testid="drop-indicator" className="h-1.5 rounded-full bg-brand" />;
+}
+
+function FragmentWithIndicator({ showBefore, children }: { showBefore: boolean; children: ReactNode }) {
+  return (
+    <>
+      {showBefore && <DropIndicator />}
+      {children}
+    </>
+  );
 }
 
 function DayColumn({
@@ -248,6 +276,7 @@ function DayColumn({
   dropIndex: number | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `${COLUMN_PREFIX}${day}`, data: { day } });
+  const total = items.reduce((sum, item) => sum + item.costEstimate, 0);
 
   return (
     <div
@@ -255,23 +284,35 @@ function DayColumn({
       role="group"
       aria-label={`Day ${day}`}
       data-testid={`day-column-${day}`}
-      className={`min-h-64 rounded-xl border-2 border-dashed p-4 transition-colors ${
-        isOver ? 'border-indigo-500 bg-indigo-50/60' : 'border-slate-300 bg-slate-100/50'
+      className={`flex min-h-64 min-w-0 flex-col gap-3 rounded-[22px] p-3.5 transition-colors ${
+        isOver ? 'bg-brand-tint ring-2 ring-brand/50' : 'bg-sunken'
       }`}
     >
-      <h3 className="mb-3 text-sm font-bold tracking-tight text-slate-900">Day {day}</h3>
+      <div className="flex items-center justify-between px-1.5 py-1">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-8.5 items-center justify-center rounded-[10px] bg-ink font-display text-base font-extrabold text-lime">
+            {day}
+          </span>
+          <span className="font-display text-lg font-bold">Day {day}</span>
+        </div>
+        {!isLoading && (
+          <span className="font-mono text-[13px] text-body">
+            {items.length} {items.length === 1 ? 'session' : 'sessions'} · {formatCurrency(total)}
+          </span>
+        )}
+      </div>
 
       {isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-28 w-full rounded-2xl" />
+          <Skeleton className="h-28 w-full rounded-2xl" />
         </div>
       ) : (
         <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
           {items.length === 0 && dropIndex === null ? (
-            <p className="text-sm text-slate-500">No sessions planned. Drag one here.</p>
+            <p className="px-1.5 text-sm text-body">No sessions planned. Drag one here.</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="flex flex-col gap-3">
               {items.map((item, index) => (
                 <FragmentWithIndicator key={item.id} showBefore={dropIndex === index}>
                   <ScheduleCard
@@ -288,15 +329,6 @@ function DayColumn({
         </SortableContext>
       )}
     </div>
-  );
-}
-
-function FragmentWithIndicator({ showBefore, children }: { showBefore: boolean; children: ReactNode }) {
-  return (
-    <>
-      {showBefore && <DropIndicator />}
-      {children}
-    </>
   );
 }
 
@@ -370,20 +402,23 @@ export default function CalendarBoard() {
   };
 
   return (
-    <section aria-labelledby="calendar-title">
-      <h2 id="calendar-title" className="mb-4 text-base font-bold tracking-tight text-slate-900">
-        Itinerary
-      </h2>
+    <section id="itinerary" aria-labelledby="calendar-title" className="flex scroll-mt-24 flex-col gap-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="calendar-title" className="font-display text-2xl font-bold">
+          Itinerary
+        </h2>
+        <span className="text-sm text-body">Drag cards or use the arrows. Days re-time automatically.</span>
+      </div>
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onDragCancel={cancelDrag}
       >
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
           {DAYS.map((day) => (
             <DayColumn
               key={day}
@@ -399,7 +434,7 @@ export default function CalendarBoard() {
 
         <DragOverlay>
           {activeItem ? (
-            <div className="rounded-xl border border-indigo-300 bg-white p-4 shadow-md">
+            <div className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-lg ring-2 ring-brand/40">
               <CardBody item={activeItem} />
             </div>
           ) : null}

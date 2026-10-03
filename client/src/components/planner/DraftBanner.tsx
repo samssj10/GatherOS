@@ -13,15 +13,15 @@ export default function DraftBanner() {
     <div
       role="status"
       data-testid="draft-banner"
-      className="flex items-center justify-between gap-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4"
+      className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-brand/25 bg-brand-tint p-4"
     >
       <div className="flex items-center gap-3">
-        <Sparkles className="h-5 w-5 shrink-0 text-indigo-600" aria-hidden="true" />
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand text-white">
+          <Sparkles className="size-5" strokeWidth={1.8} aria-hidden="true" />
+        </span>
         <div>
-          <p className="text-sm font-bold tracking-tight text-slate-900">
-            AI draft itinerary &middot; {draft.length} sessions
-          </p>
-          <p className="text-sm text-slate-600">
+          <p className="font-display text-base font-bold">AI draft itinerary &middot; {draft.length} sessions</p>
+          <p className="text-sm text-body">
             Not saved yet. Drag sessions between days, then save to publish it to attendees.
           </p>
         </div>
@@ -32,7 +32,7 @@ export default function DraftBanner() {
           type="button"
           onClick={discard}
           disabled={save.isPending}
-          className="h-10 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-60"
+          className="min-h-11 rounded-xl border border-field bg-white px-4 text-sm font-semibold text-ink transition-colors hover:bg-wash disabled:opacity-60"
         >
           Discard
         </button>
@@ -40,7 +40,7 @@ export default function DraftBanner() {
           type="button"
           onClick={() => save.mutate(draft)}
           disabled={save.isPending}
-          className="h-10 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-60"
+          className="min-h-11 rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
         >
           {save.isPending ? 'Saving…' : 'Save itinerary'}
         </button>

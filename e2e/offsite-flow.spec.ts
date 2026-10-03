@@ -27,10 +27,10 @@ test('planner generates an AI itinerary, then an attendee RSVPs with optimistic 
   });
 
   await page.goto('/planner');
-  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Mission control' })).toBeVisible();
 
   await page.getByLabel('Describe the offsite you want to plan').fill('Three-day engineering offsite in Lisbon with a sailing day');
-  await page.getByRole('button', { name: 'Generate' }).click();
+  await page.getByRole('button', { name: 'Generate draft' }).click();
 
   // 3. Verify the planner DOM: the 3-column drag-and-drop grid renders the mocked AI items.
   await expect(page.getByTestId('draft-banner')).toContainText('5 sessions');
@@ -60,7 +60,7 @@ test('planner generates an AI itinerary, then an attendee RSVPs with optimistic 
   await page.reload();
   // The route guard sends the attendee away from the planner area.
   await expect(page).toHaveURL(/\/attendee$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Welcome, Amara' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Hi, Amara' })).toBeVisible();
 
   // 5. Verify optimistic UI: delay the RSVP request by 500 ms and watch the UI react first.
   let serverResponded = false;
@@ -75,13 +75,13 @@ test('planner generates an AI itinerary, then an attendee RSVPs with optimistic 
     await route.fulfill({ response });
   });
 
-  const accept = page.getByRole('button', { name: 'Accept RSVP' });
-  await expect(accept).toHaveAttribute('aria-pressed', 'false');
+  // The redesigned RSVP card labels the accept action "I'm in" (the original spec called it "Accept RSVP").
+  const accept = page.getByRole('button', { name: "I'm in" });
+  await expect(page.getByRole('heading', { name: 'Are you in?' })).toBeVisible();
   await accept.click();
 
   // The UI has already changed while the request is still being held back...
-  await expect(accept).toHaveAttribute('aria-pressed', 'true', { timeout: 400 });
-  await expect(page.getByRole('heading', { name: "You're going!" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "You're going!" })).toBeVisible({ timeout: 400 });
   expect(serverResponded).toBe(false);
   await expect(page.getByTestId('toast')).toHaveCount(0);
 

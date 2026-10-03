@@ -1,61 +1,90 @@
-import { LayoutDashboard, LogOut, Users } from 'lucide-react';
+import { LayoutGrid, LogOut, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { useAttendeeSummary } from '@/api/attendees';
+import HostRankCard from '@/components/planner/HostRankCard';
 import { useAuth } from '@/hooks/useAuth';
+import { formatNumber, initials } from '@/utils/format';
 
 interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  /** Shows the pending-RSVP count next to the label. */
+  showPending?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/planner', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/planner/attendees', label: 'Attendees', icon: Users },
+  { to: '/planner', label: 'Dashboard', icon: LayoutGrid, end: true },
+  { to: '/planner/attendees', label: 'Attendees', icon: Users, showPending: true },
 ];
 
 export default function Sidebar() {
   const { session, signOut } = useAuth();
+  const pending = useAttendeeSummary().data?.rsvp.pending;
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 flex w-[250px] flex-col border-r border-slate-200 bg-white">
-      <div className="flex h-16 items-center gap-2 border-b border-slate-200 px-6">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
+    <aside className="flex flex-col gap-7 bg-ink px-4.5 py-6 text-canvas lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+      <div className="flex items-center gap-3 px-2">
+        <span className="flex size-9.5 items-center justify-center rounded-[11px] bg-brand font-display text-xl font-extrabold text-white">
           G
         </span>
-        <span className="text-lg font-bold tracking-tight text-slate-900">GatherOS</span>
+        <span className="font-display text-xl font-bold tracking-tight">GatherOS</span>
       </div>
 
-      <nav aria-label="Planner navigation" className="flex-1 space-y-1 p-4">
-        {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+      <nav aria-label="Planner" className="flex flex-col gap-1">
+        {NAV_ITEMS.map(({ to, label, icon: Icon, end, showPending }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
             className={({ isActive }) =>
-              [
-                'flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors',
-                'hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2',
-                isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-900',
-              ].join(' ')
+              `flex min-h-11.5 items-center gap-3 rounded-xl px-3.5 text-[15px] font-medium no-underline transition-colors ${
+                isActive
+                  ? 'bg-ink-active text-white'
+                  : 'text-ink-text hover:bg-ink-active/60 hover:text-white'
+              }`
             }
           >
-            <Icon className="h-4 w-4" aria-hidden="true" />
-            {label}
+            {({ isActive }) => (
+              <>
+                <Icon
+                  className={`size-5 ${isActive ? 'text-lime' : ''}`}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                {label}
+                {showPending && pending !== undefined && (
+                  <span className="ml-auto rounded-full bg-ink-line px-2 py-0.5 font-mono text-xs text-[#e6e8f0]">
+                    <span className="sr-only">{formatNumber(pending)} pending responses</span>
+                    <span aria-hidden="true">{formatNumber(pending)}</span>
+                  </span>
+                )}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
 
-      <div className="border-t border-slate-200 p-4">
-        <p className="truncate px-3 text-sm font-medium text-slate-900">{session?.name}</p>
-        <p className="truncate px-3 text-xs text-slate-500">{session?.email}</p>
+      <HostRankCard />
+
+      <div className="mt-auto flex flex-col gap-3.5 border-t border-ink-line px-2 pt-4">
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ink-line text-[13px] font-semibold">
+            {initials(session?.name ?? '')}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{session?.name}</p>
+            <p className="truncate text-xs text-ink-text-3">{session?.email}</p>
+          </div>
+        </div>
         <button
           type="button"
           onClick={signOut}
-          className="mt-3 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          className="-mx-2.5 flex min-h-11 items-center gap-2.5 rounded-[10px] px-2.5 text-sm text-ink-text transition-colors hover:bg-ink-active/60 hover:text-white"
         >
-          <LogOut className="h-4 w-4" aria-hidden="true" />
+          <LogOut className="size-4.5" strokeWidth={1.8} aria-hidden="true" />
           Sign out
         </button>
       </div>

@@ -28,9 +28,16 @@ export interface Attendee {
   rsvpStatus: 'accepted' | 'declined' | 'pending';
   dietaryPreference: 'none' | 'vegetarian' | 'vegan' | 'gluten-free';
   flightAssigned: boolean;
+  /** True once the attendee has explicitly chosen a dietary option (including 'none'). */
+  dietaryConfirmed: boolean;
+  /** Ids of the sessions the attendee has checked in to. */
+  stamps: string[];
+  /** ISO timestamp of the last reminder a planner sent, or null. */
+  nudgedAt: string | null;
 }
 
 export interface AttendeeScheduleDTO {
+  id: string;
   eventId: string;
   day: number;
   sessionTitle: string;
@@ -73,4 +80,16 @@ export interface GenerateScheduleInput {
   days: number;
   attendeeCount: number;
   budget?: number;
+}
+
+export interface DepartmentStat {
+  department: string;
+  total: number;
+  accepted: number;
+  /** Whole-number percentage of the department that has accepted. */
+  pct: number;
+}
+
+export interface NudgeResult {
+  nudged: number;
 }

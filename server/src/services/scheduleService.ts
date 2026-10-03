@@ -24,6 +24,7 @@ export function getBudgetSummary(): BudgetSummary {
 // Meals and keynotes are open to everyone; workshops and activities need a headcount.
 export function toAttendeeScheduleDTO(item: ScheduleItem, eventId: string): AttendeeScheduleDTO {
   return {
+    id: item.id,
     eventId,
     day: item.day,
     sessionTitle: item.title,

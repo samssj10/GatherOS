@@ -12,6 +12,7 @@ const PlannerDashboard = lazy(() => import('@/views/PlannerDashboard'));
 const PlannerAttendees = lazy(() => import('@/views/PlannerAttendees'));
 const AttendeeView = lazy(() => import('@/views/AttendeeView'));
 const AttendeeSchedule = lazy(() => import('@/views/AttendeeSchedule'));
+const AttendeePassport = lazy(() => import('@/views/AttendeePassport'));
 const AttendeePreferences = lazy(() => import('@/views/AttendeePreferences'));
 const NotFound = lazy(() => import('@/views/NotFound'));
 
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/attendee" element={<AttendeeLayout />}>
             <Route index element={<AttendeeView />} />
             <Route path="schedule" element={<AttendeeSchedule />} />
+            <Route path="passport" element={<AttendeePassport />} />
             <Route path="preferences" element={<AttendeePreferences />} />
           </Route>
         </Route>
