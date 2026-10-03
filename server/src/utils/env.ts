@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { z } from 'zod';
+import { todayAsEventDate } from './eventClock';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -11,6 +12,15 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
   SESSION_TTL_HOURS: z.coerce.number().positive().default(8),
   PLANNER_EMAIL: z.string().email().default('planner@gatheros.example.com'),
+  // Check-in opens and closes by the clock. Day 1 is EVENT_START_DATE (default: today); EVENT_NOW pins "now" for demos and tests.
+  EVENT_START_DATE: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'EVENT_START_DATE must look like 2030-06-03')
+    .default(todayAsEventDate()),
+  EVENT_NOW: z
+    .string()
+    .refine((value) => !Number.isNaN(new Date(value).getTime()), 'EVENT_NOW must be a date-time like 2030-06-03T09:30:00')
+    .optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_BASE_URL: z.string().url().optional(),
   ANTHROPIC_MODEL: z.string().default('claude-haiku-4-5'),

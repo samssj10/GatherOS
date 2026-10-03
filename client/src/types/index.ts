@@ -46,6 +46,8 @@ export interface AttendeeScheduleDTO {
   locationName: string;
   category: string;
   isRsvpRequired: boolean;
+  /** Check-in is open only while a session is live. */
+  checkInStatus: 'upcoming' | 'live' | 'ended';
 }
 
 export type AttendeeUpdate = Partial<Pick<Attendee, 'rsvpStatus' | 'dietaryPreference'>>;

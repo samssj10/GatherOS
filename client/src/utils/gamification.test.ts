@@ -25,6 +25,7 @@ const session = (
   locationName: 'Hall',
   category,
   isRsvpRequired: false,
+  checkInStatus: 'upcoming',
 });
 
 const sessions = [
