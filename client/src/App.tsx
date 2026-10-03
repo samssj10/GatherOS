@@ -15,6 +15,7 @@ const AttendeeView = lazy(() => import('@/views/AttendeeView'));
 const AttendeeSchedule = lazy(() => import('@/views/AttendeeSchedule'));
 const AttendeePassport = lazy(() => import('@/views/AttendeePassport'));
 const AttendeePreferences = lazy(() => import('@/views/AttendeePreferences'));
+const AttendeeCheckIn = lazy(() => import('@/views/AttendeeCheckIn'));
 const NotFound = lazy(() => import('@/views/NotFound'));
 
 export default function App() {
@@ -34,6 +35,8 @@ export default function App() {
         </Route>
 
         <Route element={<RequireRole role="attendee" />}>
+          {/* Full-screen camera page: no top bar or tab bar. */}
+          <Route path="/attendee/check-in" element={<AttendeeCheckIn />} />
           <Route path="/attendee" element={<AttendeeLayout />}>
             <Route index element={<AttendeeView />} />
             <Route path="schedule" element={<AttendeeSchedule />} />
