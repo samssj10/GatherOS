@@ -45,14 +45,23 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
 /** Decorative preview on the brand panel. Numbers are illustrative, not live data. */
 function BrandPreview() {
   const check = (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="stroke-white"
+      strokeWidth="2.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M5 12.5 10 17 19 7" />
     </svg>
   );
 
   return (
-    <div className="relative h-57.5 max-w-130" aria-hidden="true">
-      <div className="absolute top-0 left-0 flex w-72.5 -rotate-3 flex-col gap-2.5 rounded-[20px] border border-ink-line bg-ink-raised p-4.5">
+    <div className="relative h-75 max-w-130" aria-hidden="true">
+      <div className="absolute top-0 left-0 flex w-82 -rotate-3 flex-col gap-2.5 rounded-[20px] border border-ink-line bg-ink-raised p-4.5">
         <div className="flex items-center justify-between">
           <span className="rounded-md bg-lime px-2 py-0.75 font-mono text-[11px] font-semibold text-ink">LVL 2</span>
           <span className="font-display text-[22px] font-extrabold">
@@ -65,15 +74,15 @@ function BrandPreview() {
         </div>
       </div>
 
-      <div className="absolute top-6 right-0 flex w-50 rotate-4 items-center gap-3 rounded-[20px] bg-white p-4 text-ink">
+      <div className="absolute top-26 right-0 flex w-58 rotate-4 items-center gap-3 rounded-[20px] bg-white p-4 text-ink">
         <svg width="56" height="56" viewBox="0 0 56 56">
-          <circle cx="28" cy="28" r="22" fill="none" stroke="#eef0f5" strokeWidth="7" />
+          <circle cx="28" cy="28" r="22" fill="none" className="stroke-hairline" strokeWidth="7" />
           <circle
             cx="28"
             cy="28"
             r="22"
             fill="none"
-            stroke="#14161f"
+            className="stroke-ink"
             strokeWidth="7"
             strokeLinecap="round"
             strokeDasharray="138.2"
@@ -87,7 +96,7 @@ function BrandPreview() {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-10 flex gap-2.5 rounded-full border border-ink-line bg-ink-raised px-3.5 py-2.5">
+      <div className="absolute bottom-0 left-0 flex gap-2.5 rounded-full border border-ink-line bg-ink-raised px-3.5 py-2.5">
         {['bg-brand', 'bg-blue', 'bg-orange'].map((color) => (
           <span key={color} className={`flex size-8.5 items-center justify-center rounded-full ${color}`}>
             {check}
@@ -143,12 +152,12 @@ export default function Login() {
         </div>
 
         <div className="flex max-w-130 flex-col gap-4.5">
-          <p className="font-mono text-xs uppercase tracking-[0.08em] text-lime">Company offsite · 3 days · 7 stops</p>
-          <p className="font-display text-[52px] leading-[1.02] font-extrabold tracking-[-0.025em]">
+          <p className="font-mono text-xs uppercase tracking-[0.08em] text-lime">Team offsites, start to finish</p>
+          <h2 className="font-display text-[52px] leading-[1.02] font-extrabold tracking-tight">
             Plan it like a mission. Live it like a journey.
-          </p>
+          </h2>
           <p className="text-[17px] leading-normal text-ink-text-2">
-            Planners hit milestones. Attendees earn stamps, XP and badges from RSVP to farewell lunch.
+            Planners hit milestones. Attendees earn stamps, XP and badges from RSVP to the final session.
           </p>
         </div>
 
@@ -168,8 +177,8 @@ export default function Login() {
           </div>
 
           <div>
-            <h1 className="font-display text-[40px] leading-tight font-extrabold tracking-[-0.02em]">Welcome back</h1>
-            <p className="mt-2 text-base text-body">Sign in with your work email. No password needed.</p>
+            <h1 className="font-display text-[40px] leading-[normal] font-extrabold tracking-[-0.02em]">Welcome back</h1>
+            <p className="mt-2 text-base leading-[normal] text-body">Sign in with your work email. No password needed.</p>
           </div>
 
           <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3.5">
@@ -177,7 +186,7 @@ export default function Login() {
               Work email
             </label>
             <div
-              className={`flex min-h-13.5 items-center gap-2.5 rounded-[14px] border-2 bg-white px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand ${
+              className={`flex min-h-14.5 items-center gap-2.5 rounded-[14px] border-2 bg-white px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand ${
                 email ? 'border-brand' : 'border-field'
               }`}
             >
@@ -215,7 +224,7 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="flex items-center gap-3 text-[13px] text-muted">
+          <div className="flex items-center gap-3 text-[13px] leading-[normal] text-muted">
             <span className="h-px flex-1 bg-field" />
             Or jump into a demo
             <span className="h-px flex-1 bg-field" />
@@ -250,15 +259,15 @@ export default function Login() {
                     <span className="font-mono text-[11px] font-semibold text-body">{account.tag}</span>
                   </span>
                   <span>
-                    <span className="block text-base font-semibold">{account.title}</span>
-                    <span className="mt-0.5 block text-[13px] text-body">{account.description}</span>
+                    <span className="block text-base leading-[normal] font-semibold">{account.title}</span>
+                    <span className="mt-0.5 block text-[13px] leading-[normal] text-body">{account.description}</span>
                   </span>
                 </button>
               );
             })}
           </div>
 
-          <p className="text-[13px] text-muted">Demo accounts use sample data that resets when the server restarts.</p>
+          <p className="text-[13px] leading-[normal] text-muted">Demo accounts use sample data that resets when the server restarts.</p>
         </div>
       </main>
     </div>
