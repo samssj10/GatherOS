@@ -24,7 +24,7 @@ const TOAST_DURATION_MS = 4000;
 
 /**
  * Ephemeral UI state only. Anything fetched from the BFF lives in TanStack Query,
- * never here (CLAUDE.md section 5.B).
+ * never here, so there is a single source of truth for server data.
  */
 export const useUiStore = create<UiState>((set, get) => ({
   toasts: [],
