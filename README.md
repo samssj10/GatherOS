@@ -25,7 +25,19 @@
 <p align="center">
   <img src="docs/screenshots/attendee-desktop.png" alt="Attendee journey on desktop: a top navigation bar with a level pill, a stamp progress strip and one column per day" width="900">
   <br>
-  <sub><b>Attendee site on desktop:</b> a top bar with your level, a stamp progress strip and one column per day</sub>
+  <sub><b>Attendee site on desktop:</b> a top bar with your level, a stamp progress strip and one column per day; the live session takes the room code</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/planner-room-code.png" alt="The planner's room display: the session title, a QR code, a six-character code with a countdown and a checked-in count" width="900">
+  <br>
+  <sub><b>Room check-in code:</b> project it at the front of the room; the code changes every minute</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/attendee-check-in.png" alt="Check-in on a phone: the journey with a live session, the camera view and the stamp collected screen" width="900">
+  <br>
+  <sub><b>Checking in on a phone:</b> a live session, scan the room's QR code, stamp collected</sub>
 </p>
 
 <p align="center">
@@ -41,6 +53,7 @@
 - **Mission control.** A readiness hero tells you the one thing to do next ("14 more yeses to fill half the house"), backed by four milestones: plan all three days, keep spend under half the budget, reach Half House (half the invitees accepted) and get everyone to answer. Completing them raises your **host rank**, shown in the sidebar.
 - **AI itinerary drafts.** Describe the offsite, optionally set the city, days and attendee count, and Claude returns a structured itinerary. It lands on the board as an *unsaved draft*; milestones, rank and budget recalculate for it until you save or discard it.
 - **Drag-and-drop itinerary.** Reorder sessions within a day or drop them onto another day, by mouse or keyboard. Every card also has up, down, previous-day and next-day buttons. After any move the affected day is re-timed automatically so sessions run back to back, 15 minutes apart, each keeping its own duration.
+- **Room check-in code.** Every saved session card has a **Code** button that opens a full-screen display for the room: a QR code, a six-character code under it, a countdown to the next code and a live "checked in n of N" bar. The code changes every minute and only works while the session is live.
 - **Budget breakdown.** A stacked bar by category (meals, activities, workshops, keynotes) with an "on track", "close to the limit" or "over budget" status.
 - **RSVP overview.** Accepted, pending and declined totals with a Half House marker.
 - **Virtualized roster.** All 2,500 attendees, searchable and filterable by response, with only about 20 rows in the DOM at any time. A **Trip ready** meter shows who has answered, accepted and booked a flight, and **Nudge** reminds pending attendees one at a time or all at once.
@@ -48,7 +61,7 @@
 ### For attendees (phone and desktop)
 
 - **Home.** Level, rank and XP at a glance. The RSVP is a quest ("Are you in?") with an optimistic UI that responds instantly and rolls back on failure. A pre-trip checklist and a "first stop" teaser follow. On desktop the page becomes two columns with a "Day 1 at a glance" card.
-- **Journey.** On a phone: day tabs and a stop-by-stop timeline. On desktop: a stamp progress strip and one column per day. **Check in** at a session to collect its stamp and XP.
+- **Journey.** On a phone: day tabs and a stop-by-stop timeline. On desktop: a stamp progress strip and one column per day. Check-in opens when a session starts and closes when it ends. While one is live, **scan the QR code** on the room screen with your phone's camera, or **type the six-character code** (on desktop, or when the camera is unavailable), to collect its stamp and XP.
 - **Passport.** Your stamps, six badges (Early Responder, Fuelled Up, Jet Set, Front Row, Sea Legs, Full House) and a **team race** showing the share of each department that is going. On desktop it opens with a hero of XP, stamps and badges.
 - **Dietary quest.** Four large options, saved instantly, with a "Meals on this trip" list.
 - Touch targets of at least 44px. A four-tab bottom navigation on phones and a top navigation bar, with your level and XP, on desktop.
@@ -109,7 +122,7 @@ flowchart LR
 ### Design decisions worth knowing
 
 - **Game rules are pure functions.** XP, levels, quests, badges, milestones and host ranks live in `client/src/utils/` as plain, tested functions over data the app already fetches. There is no separate "progress" service to keep in sync.
-- **Optimistic updates with rollback.** RSVP, dietary, check-in and itinerary moves update the cache immediately, restore the previous value on error, and confirm with a toast only after the server answers.
+- **Optimistic updates with rollback.** RSVP, dietary and itinerary moves update the cache immediately, restore the previous value on error, and confirm with a toast only after the server answers. Check-in is the exception: the server decides (room code, session clock, RSVP), so the stamp appears once it says yes.
 - **Re-timing is deterministic and shared.** The rule lives in one small pure function, `reflowDay`, on the server and mirrored on the client. The client copy makes the board update instantly; the server's answer then replaces it, so the two cannot silently drift apart. Both copies are unit tested.
 - **AI drafts live in a cache-only query.** The unsaved draft is stored under a TanStack Query key with `skipToken`, so it is never refetched. A window refocus cannot overwrite it with the saved itinerary, and moving cards inside a draft is purely local until the planner clicks *Save*.
 - **Model output is not trusted.** Even with structured outputs, Claude's response is re-validated with the same zod schema used by the save endpoint, and its IDs are replaced with unique ones.
@@ -184,6 +197,9 @@ Any seeded attendee works. Emails follow the pattern `first.last.NNNN@example.co
 | `RATE_LIMIT_WINDOW_MS` | no | `60000` | Rate-limit window |
 | `RATE_LIMIT_MAX` | no | `300` | General API requests per window |
 | `AI_RATE_LIMIT_MAX` | no | `5` | AI generations per window |
+| `STAMP_RATE_LIMIT_MAX` | no | `10` | Check-in attempts per attendee per window (limits guessing the room code) |
+| `EVENT_START_DATE` | no | today | Day 1 of the offsite as `YYYY-MM-DD`. Check-in opens and closes by the server clock |
+| `EVENT_NOW` | no | | Pins "now" for demos and tests, e.g. `2030-06-03T09:30:00` with `EVENT_START_DATE=2030-06-03` makes the opening keynote live |
 | `ANTHROPIC_API_KEY` | no | | Enables AI generation |
 | `ANTHROPIC_MODEL` | no | `claude-haiku-4-5` | Model used for itineraries |
 | `ANTHROPIC_BASE_URL` | no | | Override the API endpoint (proxies, test doubles) |
@@ -229,19 +245,20 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 | `POST /attendees/nudge` | planner | Mock reminder. Body `{ ids? }`; with no ids, every pending attendee. Records the nudge and sends nothing |
 | `GET /attendees/:id` | self or planner | One attendee, including `dietaryConfirmed`, `stamps` and `nudgedAt` |
 | `PATCH /attendees/:id` | self or planner | Update `rsvpStatus` and/or `dietaryPreference` |
-| `POST /attendees/:id/stamps` | self only | Body `{ sessionId }`. Check in to a session. Only attendees who are going can collect stamps |
+| `POST /attendees/:id/stamps` | self only | Body `{ sessionId, code }`. Check in to a live session with the room code. Refusals carry a code: `NOT_GOING` (403), `ALREADY_STAMPED`, `CHECK_IN_NOT_OPEN`, `CHECK_IN_CLOSED` (409), `CODE_EXPIRED`, `CODE_INVALID` (400). Rate limited per attendee |
 | `GET /schedule` | planner | Full itinerary |
-| `GET /schedule/me` | signed in | Attendee-shaped itinerary (`AttendeeScheduleDTO[]`) |
+| `GET /schedule/me` | signed in | Attendee-shaped itinerary (`AttendeeScheduleDTO[]`), each with a `checkInStatus` of `upcoming`, `live` or `ended` |
 | `GET /schedule/budget` | planner | Budget, estimated spend and remaining |
+| `GET /schedule/:id/checkin-code` | planner | The session's current room code, when it changes, the event clock's "now", the session's check-in status and the checked-in and going counts |
 | `PUT /schedule` | planner | Replace the itinerary (used to save an AI draft) |
 | `PUT /schedule/days/:day/order` | planner | Body `{ itemIds }`: every session that should be on that day, in order (may include one moved in from another day). The server re-times the day and returns the full itinerary |
 | `POST /ai/generate-schedule` | planner | Generate an itinerary with Claude. Rate limited |
 
 ## Testing and CI
 
-**Unit tests (Vitest, 58 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status. Run them with `npm run test:unit`.
+**Unit tests (Vitest, 106 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
 
-**End-to-end (Playwright).** The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the whole product in one run:
+**End-to-end (Playwright).** Two specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
 
 1. Inject a signed planner cookie to bypass the login screen.
 2. Intercept `POST /api/ai/generate-schedule` with `page.route()` and return a hardcoded valid response.
@@ -291,7 +308,9 @@ GatherOS/
 - **No persistent database.** Data lives in server memory and resets on every restart: the 2,500 attendees, the itinerary, stamps and nudges.
 - **Mock authentication.** Sign-in is passwordless and exists for demonstration. Replace it with a real identity provider before any real use.
 - **Nudges send nothing.** The server records who was nudged and the roster shows it, but no email or message goes out.
-- **Check-in is always open.** There are no real event dates, so attendees can check in to any session at any time once they have accepted. A real deployment would unlock each session at its start time.
+- **The event clock is the server's clock.** Check-in follows `EVENT_START_DATE` and the server's local time zone; there are no stored event dates or per-venue time zones. A real deployment would keep real dates and zones with the event.
+- **A code proves you can see the room screen, not that you are in the room.** The code changes every minute and check-in attempts are limited per attendee, which makes sharing a photo of it impractical, not impossible.
+- **Cameras need HTTPS.** Browsers only allow camera access on HTTPS or localhost. Anywhere else the check-in page tells the attendee and falls back to typing the code.
 - **XP is computed in the browser.** It is derived from data the server owns, so it cannot be spoofed to gain access, but a leaderboard that matters would need server-side scoring.
 - **Replacing the itinerary orphans old stamps.** Saving a new AI itinerary gives sessions new ids, so earlier check-ins stop counting.
 - **Reordering collapses gaps.** Re-timing packs a day back to back with 15-minute gaps, so any longer gaps (a lunch break, free time) are closed up when you reorder that day. A move to another day re-times only the destination day, and a reorder that would push a day past midnight is refused.
