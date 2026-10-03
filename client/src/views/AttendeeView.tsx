@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ErrorNotice from '@/components/ErrorNotice';
 import DayGlance from '@/components/attendee/DayGlance';
@@ -73,7 +73,7 @@ export default function AttendeeView() {
           aria-label="Sign out"
           className="flex size-11 items-center justify-center rounded-xl border border-field bg-white text-body transition-colors hover:bg-wash lg:hidden"
         >
-          <LogOut className="size-5" strokeWidth={1.8} aria-hidden="true" />
+          <LogIn className="size-5" strokeWidth={1.8} aria-hidden="true" />
         </button>
       </header>
 
