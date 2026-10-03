@@ -47,7 +47,7 @@ export default function AttendeeView() {
     <div className="flex flex-col gap-4">
       <header className="flex items-center gap-3">
         <span
-          className="flex size-11 flex-none items-center justify-center rounded-full bg-brand text-[15px] font-semibold text-white"
+          className="flex size-11 flex-none items-center justify-center rounded-full bg-brand text-[15px] lg:hidden font-semibold text-white"
           aria-hidden="true"
         >
           {initials(session.name)}
@@ -62,7 +62,7 @@ export default function AttendeeView() {
           type="button"
           onClick={signOut}
           aria-label="Sign out"
-          className="flex size-11 items-center justify-center rounded-xl border border-field bg-white text-body transition-colors hover:bg-wash"
+          className="flex size-11 items-center justify-center rounded-xl border border-field bg-white text-body transition-colors hover:bg-wash lg:hidden"
         >
           <LogOut className="size-5" strokeWidth={1.8} aria-hidden="true" />
         </button>
