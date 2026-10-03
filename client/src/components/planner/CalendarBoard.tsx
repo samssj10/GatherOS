@@ -33,9 +33,11 @@ import {
   Clock,
   GripVertical,
   MapPin,
+  QrCode,
 } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { usePlannerSchedule, useReorderDay, useScheduleDraft } from '@/api/schedule';
 import ErrorNotice from '@/components/ErrorNotice';
 import Skeleton from '@/components/Skeleton';
@@ -125,7 +127,18 @@ function resolveDrop(active: Active, over: Over | null, items: ScheduleItem[]): 
 }
 
 /** Pure presentation, shared by the in-column card and the floating drag preview. */
-function CardBody({ item, handle, actions }: { item: ScheduleItem; handle?: ReactNode; actions?: ReactNode }) {
+function CardBody({
+  item,
+  handle,
+  actions,
+  afterCost,
+}: {
+  item: ScheduleItem;
+  handle?: ReactNode;
+  actions?: ReactNode;
+  /** Sits right after the price, e.g. the check-in code link. */
+  afterCost?: ReactNode;
+}) {
   const style = categoryStyle(item.category);
 
   return (
@@ -148,7 +161,10 @@ function CardBody({ item, handle, actions }: { item: ScheduleItem; handle?: Reac
         </span>
       </div>
       <div className="flex items-center justify-between pl-8.5">
-        <span className="font-mono text-sm font-semibold">{formatCurrency(item.costEstimate)}</span>
+        <div className="flex items-center gap-2.5">
+          <span className="font-mono text-sm font-semibold">{formatCurrency(item.costEstimate)}</span>
+          {afterCost}
+        </div>
         {actions}
       </div>
     </>
@@ -158,6 +174,8 @@ function CardBody({ item, handle, actions }: { item: ScheduleItem; handle?: Reac
 interface CardCallbacks {
   onShiftDay: (item: ScheduleItem, delta: -1 | 1) => void;
   onShiftPosition: (item: ScheduleItem, delta: -1 | 1) => void;
+  /** The room check-in code only exists for saved sessions, not for an unsaved AI draft. */
+  showCode: boolean;
 }
 
 function ScheduleCard({
@@ -166,6 +184,7 @@ function ScheduleCard({
   isLast,
   onShiftDay,
   onShiftPosition,
+  showCode,
 }: CardCallbacks & { item: ScheduleItem; isFirst: boolean; isLast: boolean }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
@@ -194,6 +213,19 @@ function ScheduleCard({
           >
             <GripVertical className="size-4" aria-hidden="true" />
           </button>
+        }
+        afterCost={
+          showCode ? (
+            <Link
+              to={`/planner/sessions/${item.id}/code`}
+              aria-label={`Show check-in code for ${item.title}`}
+              title="Show check-in code"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-ink px-2.5 text-xs font-semibold text-lime no-underline transition-colors hover:bg-ink-active hover:text-lime"
+            >
+              <QrCode className="size-3.5" strokeWidth={2} aria-hidden="true" />
+              Code
+            </Link>
+          ) : null
         }
         actions={
           // Click alternatives to dragging, for keyboard and assistive-technology users.
@@ -428,6 +460,7 @@ export default function CalendarBoard() {
               items={items.filter((item) => item.day === day).sort(byStartTime)}
               onShiftDay={shiftDay}
               onShiftPosition={shiftPosition}
+              showCode={!draft}
             />
           ))}
         </div>
