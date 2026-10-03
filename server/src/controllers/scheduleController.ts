@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import { getSession } from '../middlewares/auth';
+import * as checkInService from '../services/checkInService';
 import * as scheduleService from '../services/scheduleService';
 import { MAX_EVENT_DAYS, scheduleItemSchema } from '../utils/scheduleSchema';
 
@@ -10,6 +11,15 @@ export const listSchedule: RequestHandler = (_req, res) => {
 
 export const listMySchedule: RequestHandler = (_req, res) => {
   res.json(scheduleService.listAttendeeSchedule(getSession(res).eventId));
+};
+
+export const sessionParamsSchema = z.object({
+  id: z.string().regex(/^[\w-]{1,60}$/, 'Invalid session id'),
+});
+
+export const getCheckInCode: RequestHandler = (_req, res) => {
+  const { id } = res.locals.validated.params as z.infer<typeof sessionParamsSchema>;
+  res.json(checkInService.getRoomCode(id));
 };
 
 export const getBudgetSummary: RequestHandler = (_req, res) => {

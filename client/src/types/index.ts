@@ -46,6 +46,8 @@ export interface AttendeeScheduleDTO {
   locationName: string;
   category: string;
   isRsvpRequired: boolean;
+  /** Check-in is open only while a session is live. */
+  checkInStatus: 'upcoming' | 'live' | 'ended';
 }
 
 export type AttendeeUpdate = Partial<Pick<Attendee, 'rsvpStatus' | 'dietaryPreference'>>;
@@ -92,4 +94,17 @@ export interface DepartmentStat {
 
 export interface NudgeResult {
   nudged: number;
+}
+
+/** The rotating room code for one session, with live check-in numbers. Planner only. */
+export interface CheckInCodeInfo {
+  sessionId: string;
+  code: string;
+  /** ISO time the code changes. */
+  expiresAt: string;
+  /** The event clock's "now" when this was sent. */
+  serverTime: string;
+  status: AttendeeScheduleDTO['checkInStatus'];
+  checkedIn: number;
+  eligible: number;
 }

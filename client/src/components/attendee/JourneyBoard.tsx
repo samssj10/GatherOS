@@ -1,8 +1,8 @@
 import { Check, Clock, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useCheckIn } from '@/api/attendees';
+import SessionCheckIn from '@/components/attendee/SessionCheckIn';
 import type { AttendeeProgress } from '@/hooks/useAttendeeProgress';
-import { badgeHints, XP } from '@/utils/gamification';
+import { badgeHints, badgeProgress, XP } from '@/utils/gamification';
 import { categoryLabel, categoryStyle } from '@/utils/format';
 
 /** Stamp badges that can still be earned on the trip, for the "Badges in play" summary. */
@@ -11,7 +11,6 @@ const STAMP_BADGES = new Set(['frontrow', 'sealegs', 'fullhouse']);
 /** Desktop journey: a progress strip, then one column per day. */
 export default function JourneyBoard({ progress }: { progress: AttendeeProgress }) {
   const { attendee, sessions, stamps, badges } = progress;
-  const checkIn = useCheckIn(attendee.id);
   const accepted = attendee.rsvpStatus === 'accepted';
 
   const days = [...new Set(sessions.map((session) => session.day))].sort((a, b) => a - b);
@@ -153,20 +152,15 @@ export default function JourneyBoard({ progress }: { progress: AttendeeProgress 
                           ))}
                         </div>
 
-                        {!stamped && (
-                          <div className="flex justify-end border-t border-hairline pt-2.5 pl-11.5">
-                            <button
-                              type="button"
-                              disabled={!accepted || checkIn.isPending}
-                              aria-describedby={accepted ? undefined : 'stamp-hint'}
-                              onClick={() => checkIn.mutate(session.id)}
-                              className="min-h-10 rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-line disabled:text-muted"
-                            >
-                              Check in
-                              <span className="sr-only"> to {session.sessionTitle}</span>
-                            </button>
-                          </div>
-                        )}
+                        <SessionCheckIn
+                          session={session}
+                          attendeeId={attendee.id}
+                          accepted={accepted}
+                          stamped={stamped}
+                          progress={badgeProgress(session, sessions, stamps)}
+                          layout="desktop"
+                          indentClass="pl-11.5"
+                        />
                       </article>
                     </li>
                   );

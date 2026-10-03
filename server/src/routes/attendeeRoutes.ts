@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as controller from '../controllers/attendeeController';
 import { requireAuth, requireRole, requireSelf, requireSelfOrPlanner } from '../middlewares/auth';
+import { stampLimiter } from '../middlewares/rateLimiter';
 import { validate } from '../middlewares/validate';
 
 export const attendeeRouter = Router();
@@ -41,5 +42,6 @@ attendeeRouter.post(
   '/:id/stamps',
   validate({ params: controller.attendeeParamsSchema, body: controller.stampBodySchema }),
   requireSelf,
+  stampLimiter,
   controller.addStamp,
 );

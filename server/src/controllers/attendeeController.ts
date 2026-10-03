@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import * as attendeeService from '../services/attendeeService';
+import * as checkInService from '../services/checkInService';
 
 export const listAttendeesQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -27,7 +28,11 @@ export const nudgeBodySchema = z
   .strict();
 
 export const stampBodySchema = z
-  .object({ sessionId: z.string().regex(/^[\w-]{1,60}$/, 'Invalid session id') })
+  .object({
+    sessionId: z.string().regex(/^[\w-]{1,60}$/, 'Invalid session id'),
+    // Any text is accepted here; a wrong code is a CODE_INVALID answer, not a validation error.
+    code: z.string().trim().min(1, 'Enter the room code').max(20),
+  })
   .strict();
 
 export const listAttendees: RequestHandler = (_req, res) => {
@@ -61,6 +66,6 @@ export const nudgeAttendees: RequestHandler = (_req, res) => {
 
 export const addStamp: RequestHandler = (_req, res) => {
   const { id } = res.locals.validated.params as z.infer<typeof attendeeParamsSchema>;
-  const { sessionId } = res.locals.validated.body as z.infer<typeof stampBodySchema>;
-  res.status(201).json(attendeeService.addStamp(id, sessionId));
+  const { sessionId, code } = res.locals.validated.body as z.infer<typeof stampBodySchema>;
+  res.status(201).json(checkInService.checkIn(id, sessionId, code));
 };

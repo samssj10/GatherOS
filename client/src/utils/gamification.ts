@@ -71,6 +71,15 @@ export interface Quest {
   done: boolean;
 }
 
+/** What the first-stop quest says, following the RSVP, the stamp and the session's clock. */
+function checkInHint(first: AttendeeScheduleDTO, accepted: boolean, stamped: boolean): string {
+  if (stamped) return 'Done';
+  if (!accepted) return 'Unlocks after you RSVP';
+  if (first.checkInStatus === 'live') return 'Happening now';
+  if (first.checkInStatus === 'ended') return 'Check-in closed';
+  return `Opens at ${first.startTime} on Day ${first.day}`;
+}
+
 export function buildQuests(attendee: Attendee, sessions: AttendeeScheduleDTO[]): Quest[] {
   const accepted = attendee.rsvpStatus === 'accepted';
   const first = sortSessions(sessions)[0];
@@ -105,7 +114,7 @@ export function buildQuests(attendee: Attendee, sessions: AttendeeScheduleDTO[])
     quests.push({
       id: 'checkin',
       label: `Check in at ${first.sessionTitle}`,
-      sub: firstStamped ? 'Done' : accepted ? 'Ready when you arrive' : 'Unlocks after you RSVP',
+      sub: checkInHint(first, accepted, firstStamped),
       xp: XP.stamp,
       done: firstStamped,
     });
@@ -161,4 +170,33 @@ export function badgeHints(session: AttendeeScheduleDTO, ordered: AttendeeSchedu
   if (session.category === 'activity') hints.push('Sea Legs');
   if (ordered.at(-1)?.id === session.id) hints.push('Full House');
   return hints;
+}
+
+export interface BadgeProgress {
+  badge: string;
+  /** Stamps collected toward this badge. */
+  done: number;
+  total: number;
+  /** What is being counted: "keynotes", "activities" or "sessions". */
+  noun: string;
+}
+
+/** How far each badge a session counts toward has got, for "Front Row 1 of 2" style messages. */
+export function badgeProgress(
+  session: AttendeeScheduleDTO,
+  ordered: AttendeeScheduleDTO[],
+  stamps: Set<string>,
+): BadgeProgress[] {
+  const count = (group: AttendeeScheduleDTO[], badge: string, noun: string): BadgeProgress => ({
+    badge,
+    done: group.filter((entry) => stamps.has(entry.id)).length,
+    total: group.length,
+    noun,
+  });
+
+  return badgeHints(session, ordered).map((hint) => {
+    if (hint === 'Front Row') return count(ordered.filter((s) => s.category === 'keynote'), hint, 'keynotes');
+    if (hint === 'Sea Legs') return count(ordered.filter((s) => s.category === 'activity'), hint, 'activities');
+    return count(ordered, hint, 'sessions');
+  });
 }

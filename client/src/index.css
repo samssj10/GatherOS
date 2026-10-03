@@ -57,6 +57,17 @@
   --color-blue-tint: #e3f0ff;
   --color-orange: #e8761b;
   --color-orange-tint: #ffeedf;
+
+  /* The dark full-screen check-in page */
+  --color-night: #0e0f15;
+  --color-brand-night: #2a2350;
+  --color-brand-glow: #b9a9ff;
+  --color-brand-soft: #8b74ff;
+  --color-bad-night: #3a1820;
+  --color-bad-line: #7a2a3a;
+  --color-bad-glow: #ffd5dc;
+  --color-bad-soft: #ff8a9b;
+  --color-lime-hover: #ddfb7a;
 }
 
 @layer base {

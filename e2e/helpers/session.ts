@@ -29,6 +29,23 @@ export const attendeeSession: E2ESession = {
   eventId: 'evt-offsite-2026',
 };
 
+// att-0002 and att-0003 both accepted their RSVP in the seeded data.
+export const secondAttendee: E2ESession = {
+  id: 'att-0002',
+  name: 'Olivia Walker',
+  email: 'olivia.walker.0002@example.com',
+  role: 'attendee',
+  eventId: 'evt-offsite-2026',
+};
+
+export const thirdAttendee: E2ESession = {
+  id: 'att-0003',
+  name: 'Mei Kim',
+  email: 'mei.kim.0003@example.com',
+  role: 'attendee',
+  eventId: 'evt-offsite-2026',
+};
+
 /**
  * Signs a session exactly the way server/src/services/sessionService.ts does:
  * base64url(JSON payload) + "." + base64url(HMAC-SHA256). If that format ever changes,

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
-import { BASE_URL, CLIENT_PORT, SERVER_PORT, SESSION_SECRET } from './helpers/env';
+import { BASE_URL, CLIENT_PORT, EVENT_NOW, EVENT_START_DATE, SERVER_PORT, SESSION_SECRET } from './helpers/env';
 
 const isCI = Boolean(process.env.CI);
 
@@ -38,6 +38,8 @@ export default defineConfig({
         PORT: String(SERVER_PORT),
         LOG_LEVEL: 'silent',
         SESSION_SECRET,
+        EVENT_START_DATE,
+        EVENT_NOW,
         // Blank on purpose: the AI call is mocked in the browser, and a real key must never be spent by a test.
         ANTHROPIC_API_KEY: '',
       },

@@ -11,6 +11,13 @@ scheduleRouter.use(requireAuth);
 scheduleRouter.get('/me', controller.listMySchedule);
 scheduleRouter.get('/', requireRole('planner'), controller.listSchedule);
 scheduleRouter.get('/budget', requireRole('planner'), controller.getBudgetSummary);
+// The rotating code shown on the room screen. Planner only.
+scheduleRouter.get(
+  '/:id/checkin-code',
+  requireRole('planner'),
+  validate({ params: controller.sessionParamsSchema }),
+  controller.getCheckInCode,
+);
 
 // Planner-only edits: save a whole itinerary (e.g. an accepted AI draft) or reorder a day.
 scheduleRouter.put(
