@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import type { ScheduleItem } from '../types';
 import { AppError } from '../utils/AppError';
+import { dayCoverageProblems } from '../utils/dayCoverage';
 import { env } from '../utils/env';
 import { logger } from '../utils/logger';
 import { SCHEDULE_CATEGORIES, scheduleItemSchema } from '../utils/scheduleSchema';
@@ -68,7 +69,10 @@ function getClient(): Anthropic {
 }
 
 function buildUserMessage(input: GenerateScheduleInput): string {
-  const lines = [`Number of days: ${input.days}`, `Attendees: ${input.attendeeCount}`];
+  const lines = [
+    `Number of days: ${input.days}. Plan exactly ${input.days} ${input.days === 1 ? 'day' : 'days'}, numbered day 1 to day ${input.days}, with sessions on every day.`,
+    `Attendees: ${input.attendeeCount}`,
+  ];
   if (input.city) lines.unshift(`City: ${input.city}`);
   if (input.budget !== undefined) lines.push(`Total budget (USD): ${input.budget}`);
   lines.push(`Planner request: ${input.prompt}`);
@@ -143,6 +147,17 @@ export async function generateSchedule(input: GenerateScheduleInput): Promise<Sc
   if (!parsed.success) {
     logger.error({ issues: parsed.error.issues }, 'AI response failed validation');
     throw new AppError(502, 'The AI provider returned an invalid schedule', 'AI_INVALID_RESPONSE');
+  }
+
+  // A draft that skips a day or runs past the requested length is not what the planner asked for.
+  const { missing, extra } = dayCoverageProblems(parsed.data.items, input.days);
+  if (missing.length > 0 || extra.length > 0) {
+    logger.error({ requestedDays: input.days, missing, extra }, 'AI response did not match the requested days');
+    throw new AppError(
+      502,
+      `The AI draft did not cover exactly ${input.days} ${input.days === 1 ? 'day' : 'days'}. Please try again.`,
+      'AI_INVALID_RESPONSE',
+    );
   }
 
   // Model-chosen ids are not trusted to be unique; drag-and-drop and saving both rely on that.

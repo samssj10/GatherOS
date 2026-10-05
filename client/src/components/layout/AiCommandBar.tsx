@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { useAttendeeSummary } from '@/api/attendees';
 import { useBudgetSummary, useGenerateSchedule } from '@/api/schedule';
 import BurstIcon from '@/components/layout/BurstIcon';
+import { MAX_EVENT_DAYS, describeResolvedDays, resolveDays } from '@/utils/eventLength';
 
 const fieldClass =
   'mt-1 h-11 w-full rounded-xl border border-field bg-white px-3 text-sm text-ink placeholder:text-muted hover:bg-wash disabled:opacity-60';
@@ -17,11 +18,13 @@ export default function AiCommandBar() {
   const [prompt, setPrompt] = useState('');
   const [showOptions, setShowOptions] = useState(false);
   const [city, setCity] = useState('');
-  const [days, setDays] = useState(3);
+  // null = work it out from the prompt.
+  const [manualDays, setManualDays] = useState<number | null>(null);
   const [attendees, setAttendees] = useState('');
 
   const defaultAttendees = summary?.rsvp.accepted || summary?.total || 100;
   const pending = generate.isPending;
+  const resolved = resolveDays(prompt, manualDays);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -31,7 +34,7 @@ export default function AiCommandBar() {
     generate.mutate({
       prompt: prompt.trim(),
       city: city.trim() || undefined,
-      days,
+      days: resolved.days,
       attendeeCount: Number.isFinite(requested) && requested > 0 ? requested : defaultAttendees,
       budget,
     });
@@ -61,6 +64,7 @@ export default function AiCommandBar() {
               onChange={(event) => setPrompt(event.target.value)}
               disabled={pending}
               placeholder="Describe your offsite, e.g. 3-day team retreat in Lisbon with a sailing day"
+              aria-describedby="ai-days-hint"
               className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-muted disabled:opacity-60"
             />
           </div>
@@ -88,6 +92,12 @@ export default function AiCommandBar() {
           </button>
         </div>
 
+        {(prompt.trim() !== '' || manualDays !== null) && (
+          <p id="ai-days-hint" className="-mt-1 pb-3 text-xs text-muted">
+            {describeResolvedDays(resolved)}
+          </p>
+        )}
+
         {showOptions && (
           <div id="ai-options" className="grid grid-cols-3 gap-4 pb-4">
             <div>
@@ -111,14 +121,17 @@ export default function AiCommandBar() {
               </label>
               <select
                 id="ai-days"
-                value={days}
-                onChange={(event) => setDays(Number(event.target.value))}
+                value={manualDays ?? 'auto'}
+                onChange={(event) => setManualDays(event.target.value === 'auto' ? null : Number(event.target.value))}
                 disabled={pending}
                 className={fieldClass}
               >
-                <option value={1}>1 day</option>
-                <option value={2}>2 days</option>
-                <option value={3}>3 days</option>
+                <option value="auto">Auto (from your prompt)</option>
+                {Array.from({ length: MAX_EVENT_DAYS }, (_, index) => index + 1).map((value) => (
+                  <option key={value} value={value}>
+                    {value} {value === 1 ? 'day' : 'days'}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

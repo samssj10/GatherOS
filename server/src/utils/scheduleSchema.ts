@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const SCHEDULE_CATEGORIES = ['workshop', 'keynote', 'meal', 'activity'] as const;
-/** Longest offsite the planner can draft or save. Mirrored by MAX_EVENT_DAYS in client/src/utils/progress.ts. */
+/** Longest offsite the planner can draft or save. Mirrored by MAX_EVENT_DAYS in client/src/utils/eventLength.ts. */
 export const MAX_EVENT_DAYS = 7;
 /** Upper bound on sessions in one saved itinerary. */
 export const MAX_SCHEDULE_ITEMS = 150;
