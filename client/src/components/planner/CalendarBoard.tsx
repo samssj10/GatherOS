@@ -10,12 +10,12 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type {
-  Active,
+  Announcements,
   CollisionDetection,
+  Modifier,
   DragEndEvent,
   DragMoveEvent,
   DragStartEvent,
-  Over,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -42,15 +42,25 @@ import { usePlannerSchedule, useReorderDay, useScheduleDraft } from '@/api/sched
 import ErrorNotice from '@/components/ErrorNotice';
 import { DayJumpBar, PageRail } from '@/components/planner/ItineraryPager';
 import Skeleton from '@/components/Skeleton';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useUiStore } from '@/store/uiStore';
 import type { ScheduleItem } from '@/types';
+import { CHIP_PREFIX, COLUMN_PREFIX, byStartTime, idsOnDay, resolveDrop } from '@/utils/dropTarget';
 import { eventDayNumbers } from '@/utils/eventLength';
 import { categoryLabel, categoryStyle, formatCurrency } from '@/utils/format';
 import { clampPage, daysOnPage, isPaged, neighbourPages, pageCount, pageOfDay } from '@/utils/itineraryPages';
 import { reflowDay } from '@/utils/reflow';
 
 const FIRST_DAY = 1;
-const COLUMN_PREFIX = 'day-';
+
+/**
+ * Over a Day button the floating card steps down and aside so it does not cover the button it is about
+ * to drop on, or the tooltip under it.
+ */
+const stepAsideFromDayButton: Modifier = ({ over, transform }) =>
+  over && String(over.id).startsWith(CHIP_PREFIX)
+    ? { ...transform, x: transform.x + 28, y: transform.y + 96 }
+    : transform;
 
 const cardActionClass =
   'flex size-8 items-center justify-center rounded-lg bg-canvas text-ink transition-colors hover:bg-line disabled:pointer-events-none disabled:opacity-35';
@@ -63,69 +73,6 @@ const collisionDetection: CollisionDetection = (args) => {
   const underPointer = pointerWithin(args);
   return underPointer.length > 0 ? underPointer : closestCorners(args);
 };
-
-const byStartTime = (a: ScheduleItem, b: ScheduleItem) => a.startTime.localeCompare(b.startTime);
-
-const idsOnDay = (items: ScheduleItem[], day: number): string[] =>
-  items
-    .filter((item) => item.day === day)
-    .sort(byStartTime)
-    .map((item) => item.id);
-
-interface DropTarget {
-  day: number;
-  /** Every session that should be on `day` afterwards, in order. */
-  orderedIds: string[];
-  /** Where the dragged card lands among the destination day's other cards (cross-day only). */
-  index: number;
-  crossDay: boolean;
-}
-
-/** Turns "dragged card X is over Y" into the day, the new order and the landing index. */
-function resolveDrop(active: Active, over: Over | null, items: ScheduleItem[]): DropTarget | null {
-  if (!over) return null;
-  const dragged = items.find((item) => item.id === String(active.id));
-  if (!dragged) return null;
-
-  const overId = String(over.id);
-
-  // Dropped on a column's empty space: append to the end of that day.
-  if (overId.startsWith(COLUMN_PREFIX)) {
-    const day = Number(overId.slice(COLUMN_PREFIX.length));
-    if (day === dragged.day) return null;
-    const destination = idsOnDay(items, day);
-    return { day, orderedIds: [...destination, dragged.id], index: destination.length, crossDay: true };
-  }
-
-  // Dropped on another card.
-  const target = items.find((item) => item.id === overId);
-  if (!target || target.id === dragged.id) return null;
-
-  if (target.day === dragged.day) {
-    const ids = idsOnDay(items, target.day);
-    const to = ids.indexOf(target.id);
-    return {
-      day: target.day,
-      orderedIds: arrayMove(ids, ids.indexOf(dragged.id), to),
-      index: to,
-      crossDay: false,
-    };
-  }
-
-  // Another day: land before or after the hovered card, depending on which half the pointer is in.
-  const destination = idsOnDay(items, target.day);
-  const translated = active.rect.current.translated;
-  const below = translated
-    ? translated.top + translated.height / 2 > over.rect.top + over.rect.height / 2
-    : false;
-  const index = destination.indexOf(target.id) + (below ? 1 : 0);
-  return {
-    day: target.day,
-    orderedIds: [...destination.slice(0, index), dragged.id, ...destination.slice(index)],
-    index,
-    crossDay: true,
-  };
-}
 
 /** Pure presentation, shared by the in-column card and the floating drag preview. */
 function CardBody({
@@ -376,6 +323,12 @@ export default function CalendarBoard() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hint, setHint] = useState<{ day: number; index: number } | null>(null);
   const [page, setPage] = useState(0);
+  // The Day button that just received a card flashes lime briefly (skipped for reduced motion).
+  const [overDayButton, setOverDayButton] = useState(false);
+  const [flashDay, setFlashDay] = useState<number | null>(null);
+  const flashTimer = useRef<number | undefined>(undefined);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  useEffect(() => () => window.clearTimeout(flashTimer.current), []);
   const previousButton = useRef<HTMLButtonElement>(null);
   const nextButton = useRef<HTMLButtonElement>(null);
   const focusAfterTurn = useRef<'previous' | 'next' | null>(null);
@@ -418,12 +371,42 @@ export default function CalendarBoard() {
     return <ErrorNotice message="Could not load the itinerary." onRetry={() => void saved.refetch()} />;
   }
 
-  const requestReorder = (day: number, orderedIds: string[]) => {
+  const flash =(day: number) => {
+    if (reducedMotion) return;
+    window.clearTimeout(flashTimer.current);
+    setFlashDay(day);
+    flashTimer.current = window.setTimeout(() => setFlashDay(null), 600);
+  };
+
+  /** Returns false (with a toast) when the day has no room for the change. */
+  const requestReorder = (day: number, orderedIds: string[]): boolean => {
     if (!reflowDay(items, day, orderedIds)) {
       addToast('error', `There is not enough room left in Day ${day} for that.`);
-      return;
+      return false;
     }
     reorder.mutate({ day, orderedIds });
+    return true;
+  };
+
+  const titleOf = (id: string | number) => items.find((item) => item.id === String(id))?.title ?? 'the session';
+
+  // Spoken while dragging. The Day buttons say where a drop would land; after a drop the toast speaks.
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `Picked up ${titleOf(active.id)}.`,
+    onDragOver: ({ active, over }) => {
+      if (!over) return undefined;
+      const overId = String(over.id);
+      if (overId.startsWith(CHIP_PREFIX)) {
+        const day = Number(overId.slice(CHIP_PREFIX.length));
+        if (day === activeItem?.day) return undefined;
+        return `Over Day ${day}. Drop to add ${titleOf(active.id)} to the end of Day ${day}`;
+      }
+      if (overId.startsWith(COLUMN_PREFIX)) return `Over Day ${overId.slice(COLUMN_PREFIX.length)}.`;
+      return `Over ${titleOf(overId)}.`;
+    },
+    onDragEnd: ({ active, over }) =>
+      over && String(over.id).startsWith(CHIP_PREFIX) ? undefined : `Dropped ${titleOf(active.id)}.`,
+    onDragCancel: ({ active }) => `Moving ${titleOf(active.id)} was cancelled.`,
   };
 
   const shiftDay = (item: ScheduleItem, delta: -1 | 1) => {
@@ -450,6 +433,7 @@ export default function CalendarBoard() {
   // of the hovered card, not just when the hovered card changes.
   const handleDragMove = (event: DragMoveEvent) => {
     const target = resolveDrop(event.active, event.over, items);
+    setOverDayButton(target?.viaDayButton ?? false);
     const next = target?.crossDay ? { day: target.day, index: target.index } : null;
     setHint((previous) =>
       previous?.day === next?.day && previous?.index === next?.index ? previous : next,
@@ -459,18 +443,20 @@ export default function CalendarBoard() {
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
     setHint(null);
+    setOverDayButton(false);
     const target = resolveDrop(event.active, event.over, items);
     if (!target) return;
 
     const unchanged =
       !target.crossDay &&
       idsOnDay(items, target.day).every((id, index) => id === target.orderedIds[index]);
-    if (!unchanged) requestReorder(target.day, target.orderedIds);
+    if (!unchanged && requestReorder(target.day, target.orderedIds) && target.viaDayButton) flash(target.day);
   };
 
   const cancelDrag = () => {
     setActiveId(null);
     setHint(null);
+    setOverDayButton(false);
   };
 
   return (
@@ -489,11 +475,14 @@ export default function CalendarBoard() {
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onDragCancel={cancelDrag}
+        accessibility={{ announcements }}
       >
         {paged && (
           <DayJumpBar
             days={days}
             page={currentPage}
+            sourceDay={activeItem?.day ?? null}
+            flashDay={flashDay}
             onSelectDay={(day) => turnPage(pageOfDay(day))}
             onPrevious={() => turnPage(currentPage - 1, 'previous')}
             onNext={() => turnPage(currentPage + 1, 'next')}
@@ -541,9 +530,11 @@ export default function CalendarBoard() {
           )}
         </div>
 
-        <DragOverlay>
+        <DragOverlay modifiers={[stepAsideFromDayButton]}>
           {activeItem ? (
-            <div className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-lg ring-2 ring-brand/40">
+            <div
+              className={`flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-lg ring-2 ring-brand/40 ${overDayButton ? '-rotate-2' : ''}`}
+            >
               <CardBody item={activeItem} />
             </div>
           ) : null}
