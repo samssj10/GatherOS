@@ -24,7 +24,13 @@ export default function Journey({ progress }: { progress: AttendeeProgress }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div role="group" aria-label="Choose a day" className="grid grid-cols-3 gap-1.5 rounded-2xl bg-line p-1.25">
+      <div
+        role="group"
+        aria-label="Choose a day"
+        // Wraps onto a second row on a phone once a trip runs past four days.
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(4.5rem, 1fr))" }}
+        className="grid gap-1.5 rounded-2xl bg-line p-1.25"
+      >
         {days.map((value) => {
           const active = value === day;
           const count = sessions.filter((session) => session.day === value).length;

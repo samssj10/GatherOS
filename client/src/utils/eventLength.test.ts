@@ -3,6 +3,7 @@ import {
   DEFAULT_EVENT_DAYS,
   MAX_EVENT_DAYS,
   describeResolvedDays,
+  eventDayNumbers,
   parseRequestedDays,
   resolveDays,
 } from './eventLength';
@@ -79,5 +80,23 @@ describe('describeResolvedDays', () => {
     expect(describeResolvedDays(resolveDays('retreat', 1))).toBe('Planning 1 day.');
     expect(describeResolvedDays(resolveDays('retreat', null))).toContain('Planning 3 days.');
     expect(describeResolvedDays(resolveDays('two weeks', null))).toContain('you asked for 14');
+  });
+});
+
+describe('eventDayNumbers', () => {
+  const on = (...days: number[]) => days.map((day) => ({ day }));
+
+  it('shows at least the default three days, even with no sessions', () => {
+    expect(eventDayNumbers([])).toEqual([1, 2, 3]);
+    expect(eventDayNumbers(on(1))).toEqual([1, 2, 3]);
+  });
+
+  it('extends to the last day that has a session', () => {
+    expect(eventDayNumbers(on(1, 2, 3, 4, 5))).toEqual([1, 2, 3, 4, 5]);
+    expect(eventDayNumbers(on(1, 7))).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it('never goes past the maximum', () => {
+    expect(eventDayNumbers(on(12))).toHaveLength(MAX_EVENT_DAYS);
   });
 });

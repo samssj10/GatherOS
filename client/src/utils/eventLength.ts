@@ -82,3 +82,12 @@ export function describeResolvedDays({ days, source, cappedFrom }: ResolvedDays)
   if (source === 'manual') return `Planning ${label}.`;
   return `Planning ${label}. Mention a length like "5-day" in your prompt to change it.`;
 }
+
+/**
+ * The days an itinerary spans: 1 up to its last session's day, and never fewer than the default
+ * three so an empty or short plan still shows the usual columns to drag into.
+ */
+export function eventDayNumbers(items: readonly { day: number }[]): number[] {
+  const last = Math.min(MAX_EVENT_DAYS, Math.max(DEFAULT_EVENT_DAYS, ...items.map((item) => item.day)));
+  return Array.from({ length: last }, (_, index) => index + 1);
+}

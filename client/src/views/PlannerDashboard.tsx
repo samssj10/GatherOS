@@ -8,10 +8,13 @@ import ReadinessCard from '@/components/planner/ReadinessCard';
 import RsvpOverview from '@/components/planner/RsvpOverview';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { usePlannerProgress } from '@/hooks/usePlannerProgress';
+import { eventDayNumbers } from '@/utils/eventLength';
 
 export default function PlannerDashboard() {
   usePageTitle('Mission control');
-  const sessionCount = usePlannerProgress().numbers?.items.length;
+  const items = usePlannerProgress().numbers?.items;
+  const sessionCount = items?.length;
+  const dayCount = eventDayNumbers(items ?? []).length;
 
   return (
     <>
@@ -23,7 +26,7 @@ export default function PlannerDashboard() {
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted">
-              Company offsite · 3 days{sessionCount !== undefined ? ` · ${sessionCount} sessions` : ''}
+              Company offsite · {dayCount} days{sessionCount !== undefined ? ` · ${sessionCount} sessions` : ''}
             </p>
             <h1 className="mt-1.5 font-display text-[40px] leading-tight font-extrabold tracking-[-0.02em]">
               Mission control

@@ -67,6 +67,14 @@ describe('buildMilestones', () => {
     expect(byId(twoDays).itinerary).toMatchObject({ done: false, pct: (2 / 3) * 100 });
   });
 
+  it('stretches the itinerary milestone to the length of a longer trip', () => {
+    const fiveDays = { ...seeded, items: [...seeded.items, item('h', 4, 'workshop', 1000), item('i', 5, 'meal', 1000)] };
+    expect(byId(fiveDays).itinerary).toMatchObject({ title: 'Build a 5-day itinerary', done: true, pct: 100 });
+
+    const gap = { ...seeded, items: [...seeded.items, item('i', 5, 'meal', 1000)] };
+    expect(byId(gap).itinerary).toMatchObject({ done: false, pct: 80 });
+  });
+
   it('does not treat an empty itinerary as "under budget"', () => {
     expect(byId({ ...seeded, items: [] }).budget.done).toBe(false);
   });
@@ -128,6 +136,13 @@ describe('nextUnlock', () => {
     const unlock = nextUnlock(oneDay, buildMilestones(oneDay));
     expect(unlock.title).toBe('Plan all three days');
     expect(unlock.body).toContain('Day 2 and 3 have no sessions yet');
+  });
+
+  it('names every missing day on a longer trip', () => {
+    const gap = { ...seeded, items: [item('a', 1, 'keynote', 1500), item('b', 5, 'meal', 1500)] };
+    const unlock = nextUnlock(gap, buildMilestones(gap));
+    expect(unlock.title).toBe('Plan all five days');
+    expect(unlock.body).toContain('Days 2, 3 and 4 have no sessions yet');
   });
 
   it('celebrates when every milestone is complete', () => {

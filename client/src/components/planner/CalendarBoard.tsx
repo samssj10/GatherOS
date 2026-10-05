@@ -43,12 +43,11 @@ import ErrorNotice from '@/components/ErrorNotice';
 import Skeleton from '@/components/Skeleton';
 import { useUiStore } from '@/store/uiStore';
 import type { ScheduleItem } from '@/types';
+import { eventDayNumbers } from '@/utils/eventLength';
 import { categoryLabel, categoryStyle, formatCurrency } from '@/utils/format';
 import { reflowDay } from '@/utils/reflow';
 
-const DAYS = [1, 2, 3] as const;
-const FIRST_DAY = DAYS[0];
-const LAST_DAY = DAYS[DAYS.length - 1];
+const FIRST_DAY = 1;
 const COLUMN_PREFIX = 'day-';
 
 const cardActionClass =
@@ -176,6 +175,8 @@ interface CardCallbacks {
   onShiftPosition: (item: ScheduleItem, delta: -1 | 1) => void;
   /** The room check-in code only exists for saved sessions, not for an unsaved AI draft. */
   showCode: boolean;
+  /** The last day on the board; a session cannot move past it. */
+  lastDay: number;
 }
 
 function ScheduleCard({
@@ -185,6 +186,7 @@ function ScheduleCard({
   onShiftDay,
   onShiftPosition,
   showCode,
+  lastDay,
 }: CardCallbacks & { item: ScheduleItem; isFirst: boolean; isLast: boolean }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
@@ -263,10 +265,10 @@ function ScheduleCard({
             </button>
             <button
               type="button"
-              disabled={item.day === LAST_DAY}
+              disabled={item.day === lastDay}
               onClick={() => onShiftDay(item, 1)}
               aria-label={
-                item.day === LAST_DAY
+                item.day === lastDay
                   ? `${item.title} is already on the last day`
                   : `Move ${item.title} to Day ${item.day + 1}`
               }
@@ -379,6 +381,8 @@ export default function CalendarBoard() {
   );
 
   const items = draft ?? saved.data ?? [];
+  const days = eventDayNumbers(items);
+  const lastDay = days[days.length - 1];
   const activeItem = items.find((item) => item.id === activeId) ?? null;
 
   if (saved.isError && !draft) {
@@ -451,7 +455,7 @@ export default function CalendarBoard() {
         onDragCancel={cancelDrag}
       >
         <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
-          {DAYS.map((day) => (
+          {days.map((day) => (
             <DayColumn
               key={day}
               day={day}
@@ -461,6 +465,7 @@ export default function CalendarBoard() {
               onShiftDay={shiftDay}
               onShiftPosition={shiftPosition}
               showCode={!draft}
+              lastDay={lastDay}
             />
           ))}
         </div>
