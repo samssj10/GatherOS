@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   clampPage,
-  daySpanLabel,
+  daysLabel,
   daysOnPage,
   isPaged,
   neighbourPages,
@@ -45,7 +45,17 @@ describe('clampPage', () => {
 
 describe('pageOfDay', () => {
   it('maps each day to its page', () => {
-    expect([1, 2, 3, 4, 5, 6, 7].map(pageOfDay)).toEqual([0, 0, 0, 1, 1, 1, 2]);
+    expect(days(7).map((day) => pageOfDay(days(7), day))).toEqual([0, 0, 0, 1, 1, 1, 2]);
+  });
+
+  it('goes by position, so a skipped day number does not push later days onto the wrong page', () => {
+    const skipped = [1, 2, 4, 5];
+    expect(skipped.map((day) => pageOfDay(skipped, day))).toEqual([0, 0, 0, 1]);
+    expect(daysOnPage(skipped, 0)).toEqual([1, 2, 4]);
+  });
+
+  it('falls back to the first page for a day that is not in the list', () => {
+    expect(pageOfDay([1, 2, 3], 9)).toBe(0);
   });
 });
 
@@ -66,9 +76,16 @@ describe('daysOnPage', () => {
 });
 
 describe('labels', () => {
-  it('names a single day or a span', () => {
-    expect(daySpanLabel(4, 4)).toBe('Day 4');
-    expect(daySpanLabel(4, 6)).toBe('Days 4–6');
+  it('names a single day, a run or a list when the trip skips a day', () => {
+    expect(daysLabel([4])).toBe('Day 4');
+    expect(daysLabel([4, 5, 6])).toBe('Days 4–6');
+    expect(daysLabel([1, 2, 4])).toBe('Days 1, 2 and 4');
+    expect(daysLabel([])).toBe('');
+  });
+
+  it('labels a page that skips a day by the days it really has', () => {
+    expect(rangeLabel([1, 2, 4, 5], 0)).toBe('Days 1, 2 and 4 of 4');
+    expect(neighbourPages([1, 2, 4, 5], 0)).toEqual({ previous: null, next: 'Day 5' });
   });
 
   it('writes the toolbar range', () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AttendeeScheduleDTO } from '@/types';
 import {
   buildCheckInPayload,
+  focusDay,
   formatCountdown,
   isCompleteCode,
   liveSessions,
@@ -87,6 +88,31 @@ describe('liveSessions and nextSession', () => {
     const done = [session('a', 1, '09:00', 'ended')];
     expect(liveSessions(done)).toEqual([]);
     expect(nextSession(done)).toBeUndefined();
+  });
+});
+
+describe('focusDay', () => {
+  it('is the day of the live session', () => {
+    const sessions = [
+      session('a', 1, '09:00', 'ended'),
+      session('b', 4, '10:15', 'live'),
+      session('c', 4, '12:00', 'upcoming'),
+    ];
+    expect(focusDay(sessions)).toBe(4);
+  });
+
+  it('is the day of the next session when nothing is live', () => {
+    const sessions = [session('a', 1, '09:00', 'ended'), session('b', 2, '09:30', 'upcoming'), session('c', 5, '09:00', 'upcoming')];
+    expect(focusDay(sessions)).toBe(2);
+  });
+
+  it('prefers a live session over an earlier upcoming one', () => {
+    const sessions = [session('a', 2, '09:00', 'upcoming'), session('b', 3, '10:00', 'live')];
+    expect(focusDay(sessions)).toBe(3);
+  });
+
+  it('is undefined once every session has ended', () => {
+    expect(focusDay([session('a', 1, '09:00', 'ended')])).toBeUndefined();
   });
 });
 

@@ -1,19 +1,27 @@
 import { Check, Clock, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SessionCheckIn from '@/components/attendee/SessionCheckIn';
+import { DayButton, DayJumpBar, PageRail } from '@/components/DayPager';
 import type { AttendeeProgress } from '@/hooks/useAttendeeProgress';
+import { useDayPaging } from '@/hooks/useDayPaging';
+import { focusDay } from '@/utils/checkIn';
 import { badgeHints, badgeProgress, XP } from '@/utils/gamification';
 import { categoryLabel, categoryStyle } from '@/utils/format';
+import { pageOfDay } from '@/utils/itineraryPages';
 
 /** Stamp badges that can still be earned on the trip, for the "Badges in play" summary. */
 const STAMP_BADGES = new Set(['frontrow', 'sealegs', 'fullhouse']);
 
-/** Desktop journey: a progress strip, then one column per day. */
+/**
+ * Desktop journey: a progress strip, then one column per day. A trip longer than three days is paged
+ * three days at a time, opening on the page with the live or next session.
+ */
 export default function JourneyBoard({ progress }: { progress: AttendeeProgress }) {
   const { attendee, sessions, stamps, badges } = progress;
   const accepted = attendee.rsvpStatus === 'accepted';
 
   const days = [...new Set(sessions.map((session) => session.day))].sort((a, b) => a - b);
+  const paging = useDayPaging(days, pageOfDay(days, focusDay(sessions) ?? days[0]));
   const unstamped = sessions.filter((session) => !stamps.has(session.id));
   const inPlay = badges.filter((badge) => STAMP_BADGES.has(badge.id) && !badge.earned);
 
@@ -65,14 +73,37 @@ export default function JourneyBoard({ progress }: { progress: AttendeeProgress 
         </div>
       </section>
 
-      <div className="flex flex-wrap items-start gap-4">
-        {days.map((day) => {
+      {paging.paged && (
+        <DayJumpBar
+          days={days}
+          page={paging.page}
+          renderDay={(day, onPage) => (
+            <DayButton day={day} onPage={onPage} onSelect={() => paging.showDay(day)} />
+          )}
+          onPrevious={paging.previous}
+          onNext={paging.next}
+          previousRef={paging.previousButton}
+          nextRef={paging.nextButton}
+        />
+      )}
+
+      <div className="flex items-stretch gap-3">
+        {paging.paged && paging.neighbours.previous && (
+          <PageRail direction="previous" label={paging.neighbours.previous} onClick={paging.previous} />
+        )}
+        {/* auto-fill keeps a lone last day one column wide instead of stretching it across the board. */}
+        <div
+          className={`min-w-0 flex-1 items-start gap-4 ${
+            paging.paged ? 'grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))]' : 'flex flex-wrap'
+          }`}
+        >
+        {paging.visibleDays.map((day) => {
           const daySessions = sessions.filter((session) => session.day === day);
           return (
             <section
               key={day}
               aria-label={`Day ${day}`}
-              className="flex min-w-0 flex-[1_1_320px] flex-col gap-3 rounded-[22px] bg-sunken p-3.5"
+              className={`flex min-w-0 flex-col gap-3 rounded-[22px] bg-sunken p-3.5 ${paging.paged ? '' : 'flex-[1_1_320px]'}`}
             >
               <div className="flex items-center justify-between px-1.5 py-1">
                 <div className="flex items-center gap-2.5">
@@ -169,6 +200,10 @@ export default function JourneyBoard({ progress }: { progress: AttendeeProgress 
             </section>
           );
         })}
+        </div>
+        {paging.paged && paging.neighbours.next && (
+          <PageRail direction="next" label={paging.neighbours.next} onClick={paging.next} />
+        )}
       </div>
     </div>
   );

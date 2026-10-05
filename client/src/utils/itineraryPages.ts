@@ -15,9 +15,13 @@ export function clampPage(page: number, dayCount: number): number {
   return Math.max(0, Math.min(page, pageCount(dayCount) - 1));
 }
 
-/** The page (zero-based) a day sits on. Days are numbered from 1. */
-export function pageOfDay(day: number): number {
-  return Math.max(0, Math.floor((day - 1) / DAYS_PER_PAGE));
+/**
+ * The page (zero-based) a day sits on, by its position in the list of days. Not by its number:
+ * an attendee's list can skip a day nobody planned (1, 2, 4), and Day 4 is then third, on page 0.
+ */
+export function pageOfDay(days: readonly number[], day: number): number {
+  const position = days.indexOf(day);
+  return position < 0 ? 0 : Math.floor(position / DAYS_PER_PAGE);
 }
 
 /** The days shown on one page, out of every day of the trip. */
@@ -26,16 +30,23 @@ export function daysOnPage(days: readonly number[], page: number): number[] {
   return days.slice(start, start + DAYS_PER_PAGE);
 }
 
-/** "Day 4" for one day, "Days 4–6" for several. */
-export function daySpanLabel(first: number, last: number): string {
-  return first === last ? `Day ${first}` : `Days ${first}–${last}`;
+/**
+ * Names the days on a page: "Day 4", "Days 4–6" for a run, or "Days 1, 2 and 4" when the trip skips a
+ * day (an attendee only sees days that have sessions, so a range would claim a day that is not there).
+ */
+export function daysLabel(shown: readonly number[]): string {
+  if (shown.length === 0) return '';
+  const first = shown[0];
+  const last = shown[shown.length - 1];
+  if (shown.length === 1) return `Day ${first}`;
+  if (last - first === shown.length - 1) return `Days ${first}–${last}`;
+  return `Days ${shown.slice(0, -1).join(', ')} and ${last}`;
 }
 
 /** The toolbar label: "Days 1–3 of 4". */
 export function rangeLabel(days: readonly number[], page: number): string {
   const shown = daysOnPage(days, page);
-  if (shown.length === 0) return '';
-  return `${daySpanLabel(shown[0], shown[shown.length - 1])} of ${days.length}`;
+  return shown.length === 0 ? '' : `${daysLabel(shown)} of ${days.length}`;
 }
 
 export interface NeighbourPages {
@@ -48,12 +59,8 @@ export interface NeighbourPages {
 export function neighbourPages(days: readonly number[], page: number): NeighbourPages {
   const current = clampPage(page, days.length);
   const last = pageCount(days.length) - 1;
-  const span = (target: number) => {
-    const shown = daysOnPage(days, target);
-    return daySpanLabel(shown[0], shown[shown.length - 1]);
-  };
   return {
-    previous: current > 0 ? span(current - 1) : null,
-    next: current < last ? span(current + 1) : null,
+    previous: current > 0 ? daysLabel(daysOnPage(days, current - 1)) : null,
+    next: current < last ? daysLabel(daysOnPage(days, current + 1)) : null,
   };
 }

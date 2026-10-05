@@ -48,6 +48,14 @@ export function nextSession(sessions: AttendeeScheduleDTO[]): AttendeeScheduleDT
 }
 
 /**
+ * The day an attendee most likely wants to look at: the day of the session that is live right now,
+ * otherwise the day of the next one. Undefined once the trip is over.
+ */
+export function focusDay(sessions: AttendeeScheduleDTO[]): number | undefined {
+  return (liveSessions(sessions)[0] ?? nextSession(sessions))?.day;
+}
+
+/**
  * Whole seconds until the code changes. `elapsedMs` is how long ago the response arrived, so the
  * countdown follows the server's clock even when that clock is pinned for a demo.
  */

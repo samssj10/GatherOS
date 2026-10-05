@@ -41,15 +41,16 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { usePlannerSchedule, useReorderDay, useRestoreTiming, useScheduleDraft } from '@/api/schedule';
 import ErrorNotice from '@/components/ErrorNotice';
-import { DayJumpBar, PageRail } from '@/components/planner/ItineraryPager';
+import { DayJumpBar, PageRail } from '@/components/DayPager';
+import { DroppableDayChip } from '@/components/planner/ItineraryPager';
 import Skeleton from '@/components/Skeleton';
+import { useDayPaging } from '@/hooks/useDayPaging';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useUiStore } from '@/store/uiStore';
 import type { ScheduleItem } from '@/types';
 import { CHIP_PREFIX, COLUMN_PREFIX, byStartTime, idsOnDay, resolveDrop } from '@/utils/dropTarget';
 import { eventDayNumbers } from '@/utils/eventLength';
 import { categoryLabel, categoryStyle, formatCurrency } from '@/utils/format';
-import { clampPage, daysOnPage, isPaged, neighbourPages, pageCount, pageOfDay } from '@/utils/itineraryPages';
 import { reflowDay } from '@/utils/reflow';
 import { timingsOf } from '@/utils/restoreTiming';
 
@@ -362,7 +363,6 @@ export default function CalendarBoard() {
   const addToast = useUiStore((state) => state.addToast);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hint, setHint] = useState<{ day: number; index: number } | null>(null);
-  const [page, setPage] = useState(0);
   // The Day button that just received a card flashes lime briefly (skipped for reduced motion).
   const [overDayButton, setOverDayButton] = useState(false);
   // A keyboard drag walks the Day buttons with Tab; this is the one that has focus, if any.
@@ -373,16 +373,17 @@ export default function CalendarBoard() {
   const flashTimer = useRef<number | undefined>(undefined);
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   useEffect(() => () => window.clearTimeout(flashTimer.current), []);
-  const previousButton = useRef<HTMLButtonElement>(null);
-  const nextButton = useRef<HTMLButtonElement>(null);
-  const focusAfterTurn = useRef<'previous' | 'next' | null>(null);
+
+  const items = draft ?? saved.data ?? [];
+  const days = eventDayNumbers(items);
+  const paging = useDayPaging(days);
 
   // Opening or closing an AI draft starts the board back on its first page.
   const hasDraft = draft != null;
   const [sawDraft, setSawDraft] = useState(hasDraft);
   if (hasDraft !== sawDraft) {
     setSawDraft(hasDraft);
-    setPage(0);
+    paging.resetPage();
   }
 
   // Pointer drag needs a few pixels of travel so plain clicks on a card never start a drag.
@@ -391,25 +392,9 @@ export default function CalendarBoard() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes }),
   );
 
-  const items = draft ?? saved.data ?? [];
-  const days = eventDayNumbers(items);
   const dayCount = days.length;
   const lastDay = days[dayCount - 1];
-  const paged = isPaged(days.length);
-  const currentPage = clampPage(page, days.length);
-  const visibleDays = paged ? daysOnPage(days, currentPage) : days;
-  const neighbours = neighbourPages(days, currentPage);
-
-  // A button that turns the page may disable or remove itself, so hand focus to the one that still works.
-  useEffect(() => {
-    const wanted = focusAfterTurn.current;
-    focusAfterTurn.current = null;
-    if (!wanted) return;
-    const canNext = currentPage < pageCount(days.length) - 1;
-    const canPrevious = currentPage > 0;
-    const useNext = wanted === 'next' ? canNext || !canPrevious : !canPrevious && canNext;
-    (useNext ? nextButton : previousButton).current?.focus();
-  }, [currentPage, days.length]);
+  const { paged, visibleDays, neighbours } = paging;
   const activeItem = items.find((item) => item.id === activeId) ?? null;
   const sourceDay = activeItem?.day ?? null;
 
@@ -479,7 +464,7 @@ export default function CalendarBoard() {
               // The board stays where it is after a move; offer the jump only when the card is out of sight.
               ...(shownNow
                 ? []
-                : [{ label: `View Day ${day}`, variant: 'primary' as const, onClick: () => turnPage(pageOfDay(day)) }]),
+                : [{ label: `View Day ${day}`, variant: 'primary' as const, onClick: () => paging.showDay(day) }]),
               { label: 'Undo', onClick: () => restoreTiming.mutate(before) },
             ],
           }),
@@ -522,13 +507,6 @@ export default function CalendarBoard() {
     const ids = idsOnDay(items, item.day);
     const from = ids.indexOf(item.id);
     requestReorder(item.day, arrayMove(ids, from, from + delta));
-  };
-
-  const turnPage = (target: number, direction?: 'previous' | 'next') => {
-    const next = clampPage(target, days.length);
-    if (next === currentPage) return;
-    focusAfterTurn.current = direction ?? null;
-    setPage(next);
   };
 
   const chooseKeyboardTarget = (day: number | null) => {
@@ -612,18 +590,24 @@ export default function CalendarBoard() {
         {paged && (
           <DayJumpBar
             days={days}
-            page={currentPage}
-            sourceDay={activeItem?.day ?? null}
-            flashDay={flashDay}
-            keyboardDay={keyboardDay}
-            onKeyboardBlur={(day) => {
-              if (keyboardDayRef.current === day) chooseKeyboardTarget(null);
-            }}
-            onSelectDay={(day) => turnPage(pageOfDay(day))}
-            onPrevious={() => turnPage(currentPage - 1, 'previous')}
-            onNext={() => turnPage(currentPage + 1, 'next')}
-            previousRef={previousButton}
-            nextRef={nextButton}
+            page={paging.page}
+            renderDay={(day, onPage) => (
+              <DroppableDayChip
+                day={day}
+                onPage={onPage}
+                sourceDay={activeItem?.day ?? null}
+                flashing={flashDay === day}
+                keyboardTarget={keyboardDay === day}
+                onBlur={() => {
+                  if (keyboardDayRef.current === day) chooseKeyboardTarget(null);
+                }}
+                onSelect={() => paging.showDay(day)}
+              />
+            )}
+            onPrevious={paging.previous}
+            onNext={paging.next}
+            previousRef={paging.previousButton}
+            nextRef={paging.nextButton}
           />
         )}
 
@@ -632,7 +616,7 @@ export default function CalendarBoard() {
             <PageRail
               direction="previous"
               label={neighbours.previous}
-              onClick={() => turnPage(currentPage - 1, 'previous')}
+              onClick={paging.previous}
             />
           )}
           {/* auto-fill keeps a lone last day one column wide instead of stretching it across the board. */}
@@ -663,7 +647,7 @@ export default function CalendarBoard() {
             <PageRail
               direction="next"
               label={neighbours.next}
-              onClick={() => turnPage(currentPage + 1, 'next')}
+              onClick={paging.next}
             />
           )}
         </div>
