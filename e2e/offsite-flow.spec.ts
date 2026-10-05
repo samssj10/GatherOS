@@ -91,7 +91,7 @@ test('planner generates an AI itinerary, then an attendee RSVPs with optimistic 
   expect(serverResponded).toBe(true);
 });
 
-test('a five-day prompt asks for five days and fills a five-column board', async ({ page, context }) => {
+test('a five-day prompt asks for five days and pages the board three days at a time', async ({ page, context }) => {
   await context.addCookies([sessionCookie(plannerSession)]);
 
   const slots = [
@@ -127,11 +127,25 @@ test('a five-day prompt asks for five days and fills a five-column board', async
 
   await expect(page.getByTestId('draft-banner')).toContainText('10 sessions');
   expect(requestedDays).toBe(5);
-  await expect(page.getByRole('group', { name: /^Day \d$/ })).toHaveCount(5);
-  await expect(page.getByRole('group', { name: 'Day 5' }).getByRole('heading', { level: 3, name: 'E2E Day 5 keynote' })).toBeVisible();
   await expect(page.getByText('Company offsite · 5 days')).toBeVisible();
   await expect(page.getByText('Build a 5-day itinerary')).toBeVisible();
 
+  // A trip over three days is paged: Days 1 to 3 first, with a jump bar and a way to the rest.
+  await expect(page.getByRole('group', { name: /^Day \d$/ })).toHaveCount(3);
+  await expect(page.getByRole('navigation', { name: 'Jump to day' }).getByRole('button')).toHaveCount(5);
+  await expect(page.getByText('Days 1–3 of 5')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show previous days', exact: true })).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Show next days', exact: true }).click();
+  await expect(page.getByText('Days 4–5 of 5')).toBeVisible();
+  await expect(page.getByRole('group', { name: /^Day \d$/ })).toHaveCount(2);
+  await expect(page.getByRole('group', { name: 'Day 5' }).getByRole('heading', { level: 3, name: 'E2E Day 5 keynote' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show next days', exact: true })).toBeDisabled();
+
   // Nothing sits past the last day, so its "next day" arrow is disabled.
   await expect(page.getByRole('button', { name: 'E2E Day 5 keynote is already on the last day' })).toBeDisabled();
+
+  // The jump bar goes straight back to a day on the first page.
+  await page.getByRole('navigation', { name: 'Jump to day' }).getByRole('button', { name: 'Day 2' }).click();
+  await expect(page.getByRole('group', { name: 'Day 2' })).toBeVisible();
 });

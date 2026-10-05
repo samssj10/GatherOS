@@ -35,16 +35,18 @@ import {
   MapPin,
   QrCode,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { usePlannerSchedule, useReorderDay, useScheduleDraft } from '@/api/schedule';
 import ErrorNotice from '@/components/ErrorNotice';
+import { DayJumpBar, PageRail } from '@/components/planner/ItineraryPager';
 import Skeleton from '@/components/Skeleton';
 import { useUiStore } from '@/store/uiStore';
 import type { ScheduleItem } from '@/types';
 import { eventDayNumbers } from '@/utils/eventLength';
 import { categoryLabel, categoryStyle, formatCurrency } from '@/utils/format';
+import { clampPage, daysOnPage, isPaged, neighbourPages, pageCount, pageOfDay } from '@/utils/itineraryPages';
 import { reflowDay } from '@/utils/reflow';
 
 const FIRST_DAY = 1;
@@ -373,6 +375,18 @@ export default function CalendarBoard() {
   const addToast = useUiStore((state) => state.addToast);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hint, setHint] = useState<{ day: number; index: number } | null>(null);
+  const [page, setPage] = useState(0);
+  const previousButton = useRef<HTMLButtonElement>(null);
+  const nextButton = useRef<HTMLButtonElement>(null);
+  const focusAfterTurn = useRef<'previous' | 'next' | null>(null);
+
+  // Opening or closing an AI draft starts the board back on its first page.
+  const hasDraft = draft != null;
+  const [sawDraft, setSawDraft] = useState(hasDraft);
+  if (hasDraft !== sawDraft) {
+    setSawDraft(hasDraft);
+    setPage(0);
+  }
 
   // Pointer drag needs a few pixels of travel so plain clicks on a card never start a drag.
   const sensors = useSensors(
@@ -383,6 +397,21 @@ export default function CalendarBoard() {
   const items = draft ?? saved.data ?? [];
   const days = eventDayNumbers(items);
   const lastDay = days[days.length - 1];
+  const paged = isPaged(days.length);
+  const currentPage = clampPage(page, days.length);
+  const visibleDays = paged ? daysOnPage(days, currentPage) : days;
+  const neighbours = neighbourPages(days, currentPage);
+
+  // A button that turns the page may disable or remove itself, so hand focus to the one that still works.
+  useEffect(() => {
+    const wanted = focusAfterTurn.current;
+    focusAfterTurn.current = null;
+    if (!wanted) return;
+    const canNext = currentPage < pageCount(days.length) - 1;
+    const canPrevious = currentPage > 0;
+    const useNext = wanted === 'next' ? canNext || !canPrevious : !canPrevious && canNext;
+    (useNext ? nextButton : previousButton).current?.focus();
+  }, [currentPage, days.length]);
   const activeItem = items.find((item) => item.id === activeId) ?? null;
 
   if (saved.isError && !draft) {
@@ -406,6 +435,13 @@ export default function CalendarBoard() {
     const ids = idsOnDay(items, item.day);
     const from = ids.indexOf(item.id);
     requestReorder(item.day, arrayMove(ids, from, from + delta));
+  };
+
+  const turnPage = (target: number, direction?: 'previous' | 'next') => {
+    const next = clampPage(target, days.length);
+    if (next === currentPage) return;
+    focusAfterTurn.current = direction ?? null;
+    setPage(next);
   };
 
   const handleDragStart = (event: DragStartEvent) => setActiveId(String(event.active.id));
@@ -454,20 +490,55 @@ export default function CalendarBoard() {
         onDragEnd={handleDragEnd}
         onDragCancel={cancelDrag}
       >
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
-          {days.map((day) => (
-            <DayColumn
-              key={day}
-              day={day}
-              isLoading={saved.isPending && !draft}
-              dropIndex={hint?.day === day ? hint.index : null}
-              items={items.filter((item) => item.day === day).sort(byStartTime)}
-              onShiftDay={shiftDay}
-              onShiftPosition={shiftPosition}
-              showCode={!draft}
-              lastDay={lastDay}
+        {paged && (
+          <DayJumpBar
+            days={days}
+            page={currentPage}
+            onSelectDay={(day) => turnPage(pageOfDay(day))}
+            onPrevious={() => turnPage(currentPage - 1, 'previous')}
+            onNext={() => turnPage(currentPage + 1, 'next')}
+            previousRef={previousButton}
+            nextRef={nextButton}
+          />
+        )}
+
+        <div className="flex items-stretch gap-3">
+          {paged && neighbours.previous && (
+            <PageRail
+              direction="previous"
+              label={neighbours.previous}
+              onClick={() => turnPage(currentPage - 1, 'previous')}
             />
-          ))}
+          )}
+          {/* auto-fill keeps a lone last day one column wide instead of stretching it across the board. */}
+          <div
+            className={`grid min-w-0 flex-1 gap-4 ${
+              paged
+                ? 'grid-cols-[repeat(auto-fill,minmax(280px,1fr))]'
+                : 'grid-cols-[repeat(auto-fit,minmax(300px,1fr))]'
+            }`}
+          >
+            {visibleDays.map((day) => (
+              <DayColumn
+                key={day}
+                day={day}
+                isLoading={saved.isPending && !draft}
+                dropIndex={hint?.day === day ? hint.index : null}
+                items={items.filter((item) => item.day === day).sort(byStartTime)}
+                onShiftDay={shiftDay}
+                onShiftPosition={shiftPosition}
+                showCode={!draft}
+                lastDay={lastDay}
+              />
+            ))}
+          </div>
+          {paged && neighbours.next && (
+            <PageRail
+              direction="next"
+              label={neighbours.next}
+              onClick={() => turnPage(currentPage + 1, 'next')}
+            />
+          )}
         </div>
 
         <DragOverlay>
