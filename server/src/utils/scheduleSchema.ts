@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
 export const SCHEDULE_CATEGORIES = ['workshop', 'keynote', 'meal', 'activity'] as const;
-export const MAX_EVENT_DAYS = 3;
+/** Longest offsite the planner can draft or save. Mirrored by MAX_EVENT_DAYS in client/src/utils/progress.ts. */
+export const MAX_EVENT_DAYS = 7;
+/** Upper bound on sessions in one saved itinerary. */
+export const MAX_SCHEDULE_ITEMS = 150;
 
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected HH:mm');
 
@@ -22,3 +25,14 @@ export const scheduleItemSchema = z
     message: 'endTime must be after startTime',
     path: ['endTime'],
   });
+
+/** Body of POST /api/ai/generate-schedule. Lives here (not in the controller) so it can be tested without the server env. */
+export const generateScheduleBodySchema = z
+  .object({
+    prompt: z.string().trim().min(3).max(500),
+    city: z.string().trim().min(2).max(80).optional(),
+    days: z.number().int().min(1).max(MAX_EVENT_DAYS),
+    attendeeCount: z.number().int().min(1).max(2500),
+    budget: z.number().positive().max(10_000_000).optional(),
+  })
+  .strict();
