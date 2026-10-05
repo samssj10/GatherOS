@@ -38,7 +38,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { usePlannerSchedule, useReorderDay, useScheduleDraft } from '@/api/schedule';
+import { usePlannerSchedule, useReorderDay, useRestoreTiming, useScheduleDraft } from '@/api/schedule';
 import ErrorNotice from '@/components/ErrorNotice';
 import { DayJumpBar, PageRail } from '@/components/planner/ItineraryPager';
 import Skeleton from '@/components/Skeleton';
@@ -50,6 +50,7 @@ import { eventDayNumbers } from '@/utils/eventLength';
 import { categoryLabel, categoryStyle, formatCurrency } from '@/utils/format';
 import { clampPage, daysOnPage, isPaged, neighbourPages, pageCount, pageOfDay } from '@/utils/itineraryPages';
 import { reflowDay } from '@/utils/reflow';
+import { timingsOf } from '@/utils/restoreTiming';
 
 const FIRST_DAY = 1;
 
@@ -80,12 +81,15 @@ function CardBody({
   handle,
   actions,
   afterCost,
+  moveControl,
 }: {
   item: ScheduleItem;
   handle?: ReactNode;
   actions?: ReactNode;
   /** Sits right after the price, e.g. the check-in code link. */
   afterCost?: ReactNode;
+  /** A full-width row under the arrows, for jumping straight to any day. */
+  moveControl?: ReactNode;
 }) {
   const style = categoryStyle(item.category);
 
@@ -115,6 +119,7 @@ function CardBody({
         </div>
         {actions}
       </div>
+      {moveControl && <div className="pl-8.5">{moveControl}</div>}
     </>
   );
 }
@@ -126,6 +131,10 @@ interface CardCallbacks {
   showCode: boolean;
   /** The last day on the board; a session cannot move past it. */
   lastDay: number;
+  /** Moves a session to the end of another day in one step. */
+  onMoveToDay: (item: ScheduleItem, day: number) => void;
+  /** Every day a session can be sent to by name; null on a short trip, where the arrows are enough. */
+  dayChoices: number[] | null;
 }
 
 function ScheduleCard({
@@ -136,6 +145,8 @@ function ScheduleCard({
   onShiftPosition,
   showCode,
   lastDay,
+  onMoveToDay,
+  dayChoices,
 }: CardCallbacks & { item: ScheduleItem; isFirst: boolean; isLast: boolean }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
@@ -164,6 +175,26 @@ function ScheduleCard({
           >
             <GripVertical className="size-4" aria-hidden="true" />
           </button>
+        }
+        moveControl={
+          dayChoices && (
+            <select
+              aria-label={`Move ${item.title} to another day`}
+              value=""
+              onChange={(event) => {
+                const day = Number(event.target.value);
+                if (day) onMoveToDay(item, day);
+              }}
+              className="h-8 w-full cursor-pointer rounded-lg bg-canvas px-2 text-xs font-medium text-ink transition-colors hover:bg-line"
+            >
+              <option value="">Move to another day…</option>
+              {dayChoices.map((day) => (
+                <option key={day} value={day} disabled={day === item.day}>
+                  Day {day}
+                </option>
+              ))}
+            </select>
+          )
         }
         afterCost={
           showCode ? (
@@ -319,6 +350,7 @@ export default function CalendarBoard() {
   const saved = usePlannerSchedule();
   const draft = useScheduleDraft().data;
   const reorder = useReorderDay();
+  const restoreTiming = useRestoreTiming();
   const addToast = useUiStore((state) => state.addToast);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hint, setHint] = useState<{ day: number; index: number } | null>(null);
@@ -378,13 +410,41 @@ export default function CalendarBoard() {
     flashTimer.current = window.setTimeout(() => setFlashDay(null), 600);
   };
 
-  /** Returns false (with a toast) when the day has no room for the change. */
-  const requestReorder = (day: number, orderedIds: string[]): boolean => {
-    if (!reflowDay(items, day, orderedIds)) {
+  /**
+   * Re-times `day` to the given order. Pass `moved` when a session is coming from another day: the
+   * confirmation then names where it landed and offers View and Undo. Returns false (with a toast)
+   * when the day has no room for the change.
+   */
+  const requestReorder = (day: number, orderedIds: string[], moved?: ScheduleItem): boolean => {
+    const result = reflowDay(items, day, orderedIds);
+    if (!result) {
       addToast('error', `There is not enough room left in Day ${day} for that.`);
       return false;
     }
-    reorder.mutate({ day, orderedIds });
+    if (!moved) {
+      reorder.mutate({ day, orderedIds });
+      return true;
+    }
+
+    // Everything on the two days involved is re-timed, so remember how they were to put them back exactly.
+    const before = timingsOf(items.filter((item) => item.day === moved.day || item.day === day));
+    const landed = result.find((item) => item.id === moved.id) ?? moved;
+    const shownNow = visibleDays.includes(day);
+    reorder.mutate(
+      { day, orderedIds, quiet: true },
+      {
+        onSuccess: () =>
+          addToast('success', `Moved ${moved.title} to Day ${day} · ${landed.startTime} – ${landed.endTime}`, {
+            actions: [
+              // The board stays where it is after a move; offer the jump only when the card is out of sight.
+              ...(shownNow
+                ? []
+                : [{ label: `View Day ${day}`, variant: 'primary' as const, onClick: () => turnPage(pageOfDay(day)) }]),
+              { label: 'Undo', onClick: () => restoreTiming.mutate(before) },
+            ],
+          }),
+      },
+    );
     return true;
   };
 
@@ -411,7 +471,11 @@ export default function CalendarBoard() {
 
   const shiftDay = (item: ScheduleItem, delta: -1 | 1) => {
     const day = item.day + delta;
-    requestReorder(day, [...idsOnDay(items, day), item.id]);
+    requestReorder(day, [...idsOnDay(items, day), item.id], item);
+  };
+
+  const moveToDay = (item: ScheduleItem, day: number) => {
+    if (day !== item.day) requestReorder(day, [...idsOnDay(items, day), item.id], item);
   };
 
   const shiftPosition = (item: ScheduleItem, delta: -1 | 1) => {
@@ -450,7 +514,10 @@ export default function CalendarBoard() {
     const unchanged =
       !target.crossDay &&
       idsOnDay(items, target.day).every((id, index) => id === target.orderedIds[index]);
-    if (!unchanged && requestReorder(target.day, target.orderedIds) && target.viaDayButton) flash(target.day);
+    const dragged = items.find((item) => item.id === String(event.active.id));
+    if (unchanged) return;
+    const moved = target.crossDay ? dragged : undefined;
+    if (requestReorder(target.day, target.orderedIds, moved) && target.viaDayButton) flash(target.day);
   };
 
   const cancelDrag = () => {
@@ -518,6 +585,8 @@ export default function CalendarBoard() {
                 onShiftPosition={shiftPosition}
                 showCode={!draft}
                 lastDay={lastDay}
+                onMoveToDay={moveToDay}
+                dayChoices={paged ? days : null}
               />
             ))}
           </div>

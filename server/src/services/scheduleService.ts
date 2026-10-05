@@ -3,6 +3,8 @@ import { env } from '../utils/env';
 import { checkInStatus, parseEventDate } from '../utils/eventClock';
 import type { CheckInStatus } from '../utils/eventClock';
 import { reflowDay } from '../utils/reflow';
+import { applyTiming } from '../utils/restoreTiming';
+import type { TimingEntry } from '../utils/restoreTiming';
 import { db } from './mockDb';
 
 export interface BudgetSummary {
@@ -60,6 +62,12 @@ export function listAttendeeSchedule(eventId: string): AttendeeScheduleDTO[] {
 
 export function reorderDay(day: number, itemIds: string[]): ScheduleItem[] {
   db.schedule = reflowDay(db.schedule, day, itemIds);
+  return db.schedule;
+}
+
+/** Puts sessions back on the days and times they had (used to undo a move exactly). */
+export function restoreTiming(entries: TimingEntry[]): ScheduleItem[] {
+  db.schedule = applyTiming(db.schedule, entries);
   return db.schedule;
 }
 

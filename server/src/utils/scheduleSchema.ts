@@ -36,3 +36,25 @@ export const generateScheduleBodySchema = z
     budget: z.number().positive().max(10_000_000).optional(),
   })
   .strict();
+
+/** One session's day and times: what "undo a move" puts back. Nothing else about a session can change this way. */
+export const timingEntrySchema = z
+  .object({
+    id: z.string().min(1).max(60),
+    day: z.number().int().min(1).max(MAX_EVENT_DAYS),
+    startTime: timeSchema,
+    endTime: timeSchema,
+  })
+  .strict()
+  .refine((entry) => entry.startTime < entry.endTime, {
+    message: 'endTime must be after startTime',
+    path: ['endTime'],
+  });
+
+export const restoreTimingBodySchema = z
+  .object({ items: z.array(timingEntrySchema).min(1).max(MAX_SCHEDULE_ITEMS) })
+  .strict()
+  .refine((body) => new Set(body.items.map((entry) => entry.id)).size === body.items.length, {
+    message: 'Session ids must be unique',
+    path: ['items'],
+  });

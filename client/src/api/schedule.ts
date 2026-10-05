@@ -3,6 +3,8 @@ import { ApiError, apiFetch } from '@/api/client';
 import { scheduleKeys } from '@/api/keys';
 import { useUiStore } from '@/store/uiStore';
 import { reflowDay } from '@/utils/reflow';
+import { applyTiming } from '@/utils/restoreTiming';
+import type { TimingEntry } from '@/utils/restoreTiming';
 import type {
   AttendeeScheduleDTO,
   BudgetSummary,
@@ -110,6 +112,8 @@ interface ReorderInput {
   day: number;
   /** Every session that should be on `day`, in the new order (may include one moved in from another day). */
   orderedIds: string[];
+  /** The caller shows its own confirmation (e.g. a toast with Undo), so skip the generic one. */
+  quiet?: boolean;
 }
 
 /**
@@ -147,15 +151,57 @@ export function useReorderDay() {
       useUiStore.getState().addToast('error', 'Could not save that change. Please try again.');
     },
 
-    onSuccess: (saved, { day }, context) => {
+    onSuccess: (saved, { day, quiet }, context) => {
       // The server computed the times itself, so its answer is the source of truth.
       if (saved) queryClient.setQueryData(scheduleKeys.planner, saved);
+      if (quiet) return;
       useUiStore
         .getState()
         .addToast('success', context.moved ? `Moved to Day ${day}.` : `Day ${day} reordered.`);
     },
 
     onSettled: (_data, _error, _input, context) => {
+      if (context?.key === scheduleKeys.planner) {
+        void queryClient.invalidateQueries({ queryKey: scheduleKeys.planner });
+        void queryClient.invalidateQueries({ queryKey: scheduleKeys.mine });
+      }
+    },
+  });
+}
+
+/**
+ * Undoes a move exactly by putting the given sessions back on the days and times they had. Moving a
+ * session back by reordering would not do: re-timing the days it passed through shifted the others too.
+ * Optimistic like the move itself; on an AI draft it only touches the local draft.
+ */
+export function useRestoreTiming() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (entries: TimingEntry[]) => {
+      if (queryClient.getQueryData(scheduleKeys.draft)) return null;
+      return apiFetch<ScheduleItem[]>('/schedule/timing', { method: 'PUT', body: { items: entries } });
+    },
+
+    onMutate: async (entries) => {
+      const key = queryClient.getQueryData(scheduleKeys.draft) ? scheduleKeys.draft : scheduleKeys.planner;
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<ScheduleItem[] | null>(key);
+      if (previous) queryClient.setQueryData<ScheduleItem[]>(key, applyTiming(previous, entries));
+      return { key, previous };
+    },
+
+    onError: (_error, _entries, context) => {
+      if (context?.previous) queryClient.setQueryData(context.key, context.previous);
+      useUiStore.getState().addToast('error', 'Could not undo that move. Please try again.');
+    },
+
+    onSuccess: (saved) => {
+      if (saved) queryClient.setQueryData(scheduleKeys.planner, saved);
+      useUiStore.getState().addToast('success', 'Move undone.');
+    },
+
+    onSettled: (_data, _error, _entries, context) => {
       if (context?.key === scheduleKeys.planner) {
         void queryClient.invalidateQueries({ queryKey: scheduleKeys.planner });
         void queryClient.invalidateQueries({ queryKey: scheduleKeys.mine });

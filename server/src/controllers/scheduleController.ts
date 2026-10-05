@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getSession } from '../middlewares/auth';
 import * as checkInService from '../services/checkInService';
 import * as scheduleService from '../services/scheduleService';
-import { MAX_EVENT_DAYS, MAX_SCHEDULE_ITEMS, scheduleItemSchema } from '../utils/scheduleSchema';
+import { MAX_EVENT_DAYS, MAX_SCHEDULE_ITEMS, restoreTimingBodySchema, scheduleItemSchema } from '../utils/scheduleSchema';
 
 export const listSchedule: RequestHandler = (_req, res) => {
   res.json(scheduleService.listSchedule());
@@ -46,6 +46,13 @@ export const reorderDay: RequestHandler = (_req, res) => {
   const { day } = res.locals.validated.params as z.infer<typeof reorderDayParamsSchema>;
   const { itemIds } = res.locals.validated.body as z.infer<typeof reorderDayBodySchema>;
   res.json(scheduleService.reorderDay(day, itemIds));
+};
+
+export { restoreTimingBodySchema };
+
+export const restoreTiming: RequestHandler = (_req, res) => {
+  const { items } = res.locals.validated.body as z.infer<typeof restoreTimingBodySchema>;
+  res.json(scheduleService.restoreTiming(items));
 };
 
 export const replaceSchedule: RequestHandler = (_req, res) => {
