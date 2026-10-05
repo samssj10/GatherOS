@@ -16,6 +16,7 @@ import type {
   DragEndEvent,
   DragMoveEvent,
   DragStartEvent,
+  Over,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -58,10 +59,18 @@ const FIRST_DAY = 1;
  * Over a Day button the floating card steps down and aside so it does not cover the button it is about
  * to drop on, or the tooltip under it.
  */
-const stepAsideFromDayButton: Modifier = ({ over, transform }) =>
-  over && String(over.id).startsWith(CHIP_PREFIX)
-    ? { ...transform, x: transform.x + 28, y: transform.y + 96 }
-    : transform;
+const stepAside =
+  (focusedDayButton: boolean): Modifier =>
+  ({ over, transform }) =>
+    focusedDayButton || (over && String(over.id).startsWith(CHIP_PREFIX))
+      ? { ...transform, x: transform.x + 28, y: transform.y + 96 }
+      : transform;
+
+/**
+ * dnd-kit ends a keyboard drag on Tab by default. Here Tab walks the Day buttons instead, so only
+ * Space and Enter drop, and Escape cancels.
+ */
+const keyboardCodes = { start: ['Space', 'Enter'], cancel: ['Escape'], end: ['Space', 'Enter'] };
 
 const cardActionClass =
   'flex size-8 items-center justify-center rounded-lg bg-canvas text-ink transition-colors hover:bg-line disabled:pointer-events-none disabled:opacity-35';
@@ -357,6 +366,10 @@ export default function CalendarBoard() {
   const [page, setPage] = useState(0);
   // The Day button that just received a card flashes lime briefly (skipped for reduced motion).
   const [overDayButton, setOverDayButton] = useState(false);
+  // A keyboard drag walks the Day buttons with Tab; this is the one that has focus, if any.
+  const [keyboardDrag, setKeyboardDrag] = useState(false);
+  const [keyboardDay, setKeyboardDay] = useState<number | null>(null);
+  const keyboardDayRef = useRef<number | null>(null);
   const [flashDay, setFlashDay] = useState<number | null>(null);
   const flashTimer = useRef<number | undefined>(undefined);
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -376,12 +389,13 @@ export default function CalendarBoard() {
   // Pointer drag needs a few pixels of travel so plain clicks on a card never start a drag.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes }),
   );
 
   const items = draft ?? saved.data ?? [];
   const days = eventDayNumbers(items);
-  const lastDay = days[days.length - 1];
+  const dayCount = days.length;
+  const lastDay = days[dayCount - 1];
   const paged = isPaged(days.length);
   const currentPage = clampPage(page, days.length);
   const visibleDays = paged ? daysOnPage(days, currentPage) : days;
@@ -398,12 +412,39 @@ export default function CalendarBoard() {
     (useNext ? nextButton : previousButton).current?.focus();
   }, [currentPage, days.length]);
   const activeItem = items.find((item) => item.id === activeId) ?? null;
+  const sourceDay = activeItem?.day ?? null;
+
+  // While a card is picked up with the keyboard, Tab and Shift+Tab walk the Day buttons (every day but
+  // the card's own), the arrow keys go back to moving the card around the board, and Space drops.
+  useEffect(() => {
+    if (!keyboardDrag || sourceDay === null) return;
+    const targets = Array.from({ length: dayCount }, (_, index) => index + 1).filter((day) => day !== sourceDay);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.startsWith('Arrow')) {
+        keyboardDayRef.current = null;
+        setKeyboardDay(null);
+        return;
+      }
+      if (event.key !== 'Tab' || targets.length === 0) return;
+      event.preventDefault();
+      const at = keyboardDayRef.current === null ? -1 : targets.indexOf(keyboardDayRef.current);
+      const step = event.shiftKey ? -1 : 1;
+      const next = targets[at === -1 ? (step === 1 ? 0 : targets.length - 1) : (at + step + targets.length) % targets.length];
+      keyboardDayRef.current = next;
+      setKeyboardDay(next);
+      document.querySelector<HTMLButtonElement>(`nav[aria-label="Jump to day"] button[data-day="${next}"]`)?.focus();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [keyboardDrag, sourceDay, dayCount]);
 
   if (saved.isError && !draft) {
     return <ErrorNotice message="Could not load the itinerary." onRetry={() => void saved.refetch()} />;
   }
 
-  const flash =(day: number) => {
+  const flash = (day: number) => {
     if (reducedMotion) return;
     window.clearTimeout(flashTimer.current);
     setFlashDay(day);
@@ -491,7 +532,20 @@ export default function CalendarBoard() {
     setPage(next);
   };
 
-  const handleDragStart = (event: DragStartEvent) => setActiveId(String(event.active.id));
+  const chooseKeyboardTarget = (day: number | null) => {
+    keyboardDayRef.current = day;
+    setKeyboardDay(day);
+  };
+
+  const clearKeyboardTarget = () => {
+    chooseKeyboardTarget(null);
+    setKeyboardDrag(false);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+    setKeyboardDrag(event.activatorEvent instanceof KeyboardEvent);
+  };
 
   // onDragMove (not onDragOver) so the marker follows the pointer between the top and bottom half
   // of the hovered card, not just when the hovered card changes.
@@ -508,7 +562,11 @@ export default function CalendarBoard() {
     setActiveId(null);
     setHint(null);
     setOverDayButton(false);
-    const target = resolveDrop(event.active, event.over, items);
+    // A keyboard drag that Tabbed onto a Day button drops there: the card has no pointer to follow.
+    const keyboardTarget = keyboardDayRef.current;
+    const over = keyboardTarget === null ? event.over : ({ id: `${CHIP_PREFIX}${keyboardTarget}` } as Over);
+    clearKeyboardTarget();
+    const target = resolveDrop(event.active, over, items);
     if (!target) return;
 
     const unchanged =
@@ -524,6 +582,7 @@ export default function CalendarBoard() {
     setActiveId(null);
     setHint(null);
     setOverDayButton(false);
+    clearKeyboardTarget();
   };
 
   return (
@@ -534,6 +593,13 @@ export default function CalendarBoard() {
         </h2>
         <span className="text-sm text-body">Drag cards or use the arrows. Days re-time automatically.</span>
       </div>
+
+      {/* Keyboard drags: says which Day button is focused, as dnd-kit only speaks for pointer targets. */}
+      <p className="sr-only" aria-live="polite">
+        {keyboardDay !== null && activeItem
+          ? `Over Day ${keyboardDay}. Drop to add ${activeItem.title} to the end of Day ${keyboardDay}`
+          : ''}
+      </p>
 
       <DndContext
         sensors={sensors}
@@ -550,6 +616,10 @@ export default function CalendarBoard() {
             page={currentPage}
             sourceDay={activeItem?.day ?? null}
             flashDay={flashDay}
+            keyboardDay={keyboardDay}
+            onKeyboardBlur={(day) => {
+              if (keyboardDayRef.current === day) chooseKeyboardTarget(null);
+            }}
             onSelectDay={(day) => turnPage(pageOfDay(day))}
             onPrevious={() => turnPage(currentPage - 1, 'previous')}
             onNext={() => turnPage(currentPage + 1, 'next')}
@@ -599,10 +669,10 @@ export default function CalendarBoard() {
           )}
         </div>
 
-        <DragOverlay modifiers={[stepAsideFromDayButton]}>
+        <DragOverlay modifiers={[stepAside(keyboardDay !== null)]}>
           {activeItem ? (
             <div
-              className={`flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-lg ring-2 ring-brand/40 ${overDayButton ? '-rotate-2' : ''}`}
+              className={`flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-lg ring-2 ring-brand/40 ${overDayButton || keyboardDay !== null ? '-rotate-2' : ''}`}
             >
               <CardBody item={activeItem} />
             </div>

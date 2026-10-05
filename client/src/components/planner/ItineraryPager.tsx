@@ -14,11 +14,14 @@ interface DayChipProps {
   sourceDay: number | null;
   /** The day that just received a card, flashing lime for a moment. */
   flashing: boolean;
+  /** True while a keyboard drag has this button focused: it looks and speaks like a hovered target. */
+  keyboardTarget: boolean;
+  onBlur: () => void;
   onSelect: () => void;
 }
 
 /** One Day button: a jump link when idle, a drop target for a dragged card while dragging. */
-function DayChip({ day, onPage, sourceDay, flashing, onSelect }: DayChipProps) {
+function DayChip({ day, onPage, sourceDay, flashing, keyboardTarget, onBlur, onSelect }: DayChipProps) {
   const dragging = sourceDay !== null;
   const isSource = sourceDay === day;
   const { setNodeRef, isOver } = useDroppable({
@@ -27,11 +30,12 @@ function DayChip({ day, onPage, sourceDay, flashing, onSelect }: DayChipProps) {
     disabled: !dragging || isSource,
   });
   const target = dragging && !isSource;
+  const hovered = target && (isOver || keyboardTarget);
 
   // One state wins at a time: the lime flash after a drop, the hover ring, the dashed "you can drop here" hint, then idle.
   let look: string;
   if (flashing) look = 'border-lime bg-lime text-ink';
-  else if (target && isOver)
+  else if (hovered)
     look = 'border-brand bg-brand-tint text-brand-ink ring-4 ring-brand/20 motion-safe:scale-[1.06]';
   else if (target)
     look = onPage ? 'border-dashed border-brand-soft bg-ink text-white' : 'border-dashed border-brand bg-white text-ink';
@@ -42,6 +46,8 @@ function DayChip({ day, onPage, sourceDay, flashing, onSelect }: DayChipProps) {
       ref={setNodeRef}
       type="button"
       onClick={onSelect}
+      onBlur={onBlur}
+      data-day={day}
       aria-current={onPage ? 'true' : undefined}
       // The dashed border is 2px wide, so the side padding gives up a pixel to keep the button the same size.
       className={`relative inline-flex min-h-10 items-center gap-1.5 rounded-[10px] border text-sm font-medium transition-[scale,background-color,box-shadow,opacity] ${
@@ -49,9 +55,9 @@ function DayChip({ day, onPage, sourceDay, flashing, onSelect }: DayChipProps) {
       } ${isSource ? 'opacity-40' : ''} ${look}`}
     >
       {flashing && <Check className="size-3.5" strokeWidth={2.4} aria-hidden="true" />}
-      {!flashing && target && isOver && <Plus className="size-3.5" strokeWidth={2.4} aria-hidden="true" />}
+      {!flashing && hovered && <Plus className="size-3.5" strokeWidth={2.4} aria-hidden="true" />}
       Day {day}
-      {target && isOver && !flashing && (
+      {hovered && !flashing && (
         <span
           aria-hidden="true"
           className="pointer-events-none absolute top-full left-1/2 z-30 mt-2 -translate-x-1/2 rounded-lg bg-ink px-3 py-1.5 text-xs font-medium whitespace-nowrap text-white shadow-lg"
@@ -68,6 +74,8 @@ interface JumpBarProps {
   page: number;
   sourceDay: number | null;
   flashDay: number | null;
+  keyboardDay: number | null;
+  onKeyboardBlur: (day: number) => void;
   onSelectDay: (day: number) => void;
   onPrevious: () => void;
   onNext: () => void;
@@ -79,7 +87,7 @@ interface JumpBarProps {
  * Sits above the board on trips longer than one page: a button per day (dark = on screen,
  * white = on another page), the "Days 1–3 of 4" label and the previous / next page buttons.
  */
-export function DayJumpBar({ days, page, sourceDay, flashDay, onSelectDay, onPrevious, onNext, previousRef, nextRef }: JumpBarProps) {
+export function DayJumpBar({ days, page, sourceDay, flashDay, keyboardDay, onKeyboardBlur, onSelectDay, onPrevious, onNext, previousRef, nextRef }: JumpBarProps) {
   const lastPage = pageOfDay(days.length);
 
   return (
@@ -92,6 +100,8 @@ export function DayJumpBar({ days, page, sourceDay, flashDay, onSelectDay, onPre
             onPage={pageOfDay(day) === page}
             sourceDay={sourceDay}
             flashing={flashDay === day}
+            keyboardTarget={keyboardDay === day}
+            onBlur={() => onKeyboardBlur(day)}
             onSelect={() => onSelectDay(day)}
           />
         ))}
