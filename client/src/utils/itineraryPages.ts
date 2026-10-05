@@ -15,9 +15,13 @@ export function clampPage(page: number, dayCount: number): number {
   return Math.max(0, Math.min(page, pageCount(dayCount) - 1));
 }
 
-/** The page (zero-based) a day sits on. Days are numbered from 1. */
-export function pageOfDay(day: number): number {
-  return Math.max(0, Math.floor((day - 1) / DAYS_PER_PAGE));
+/**
+ * The page (zero-based) a day sits on, by its position in the list of days. Not by its number:
+ * an attendee's list can skip a day nobody planned (1, 2, 4), and Day 4 is then third, on page 0.
+ */
+export function pageOfDay(days: readonly number[], day: number): number {
+  const position = days.indexOf(day);
+  return position < 0 ? 0 : Math.floor(position / DAYS_PER_PAGE);
 }
 
 /** The days shown on one page, out of every day of the trip. */

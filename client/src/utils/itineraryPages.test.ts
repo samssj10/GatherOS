@@ -45,7 +45,17 @@ describe('clampPage', () => {
 
 describe('pageOfDay', () => {
   it('maps each day to its page', () => {
-    expect([1, 2, 3, 4, 5, 6, 7].map(pageOfDay)).toEqual([0, 0, 0, 1, 1, 1, 2]);
+    expect(days(7).map((day) => pageOfDay(days(7), day))).toEqual([0, 0, 0, 1, 1, 1, 2]);
+  });
+
+  it('goes by position, so a skipped day number does not push later days onto the wrong page', () => {
+    const skipped = [1, 2, 4, 5];
+    expect(skipped.map((day) => pageOfDay(skipped, day))).toEqual([0, 0, 0, 1]);
+    expect(daysOnPage(skipped, 0)).toEqual([1, 2, 4]);
+  });
+
+  it('falls back to the first page for a day that is not in the list', () => {
+    expect(pageOfDay([1, 2, 3], 9)).toBe(0);
   });
 });
 
