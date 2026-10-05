@@ -50,7 +50,7 @@
 
 ### For planners (desktop)
 
-- **Mission control.** A readiness hero tells you the one thing to do next ("14 more yeses to fill half the house"), backed by four milestones: plan all three days, keep spend under half the budget, reach Half House (half the invitees accepted) and get everyone to answer. Completing them raises your **host rank**, shown in the sidebar.
+- **Mission control.** A readiness hero tells you the one thing to do next ("14 more yeses to fill half the house"), backed by four milestones: plan every day of the trip (three by default, up to seven), keep spend under half the budget, reach Half House (half the invitees accepted) and get everyone to answer. Completing them raises your **host rank**, shown in the sidebar.
 - **AI itinerary drafts.** Describe the offsite, optionally set the city, days and attendee count, and Claude returns a structured itinerary. It lands on the board as an *unsaved draft*; milestones, rank and budget recalculate for it until you save or discard it.
 - **Drag-and-drop itinerary.** Reorder sessions within a day or drop them onto another day, by mouse or keyboard. Every card also has up, down, previous-day and next-day buttons. After any move the affected day is re-timed automatically so sessions run back to back, 15 minutes apart, each keeping its own duration.
 - **Room check-in code.** Every saved session card has a **Code** button that opens a full-screen display for the room: a QR code, a six-character code under it, a countdown to the next code and a live "checked in n of N" bar. The code changes every minute and only works while the session is live.
@@ -314,4 +314,4 @@ GatherOS/
 - **XP is computed in the browser.** It is derived from data the server owns, so it cannot be spoofed to gain access, but a leaderboard that matters would need server-side scoring.
 - **Replacing the itinerary orphans old stamps.** Saving a new AI itinerary gives sessions new ids, so earlier check-ins stop counting.
 - **Reordering collapses gaps.** Re-timing packs a day back to back with 15-minute gaps, so any longer gaps (a lunch break, free time) are closed up when you reorder that day. A move to another day re-times only the destination day, and a reorder that would push a day past midnight is refused.
-- **Single event, three days.** The data model and UI are built around one offsite of up to three days.
+- **Single event, up to seven days.** The data model and UI are built around one offsite of one to seven days. The AI bar reads the length from the prompt ("5-day retreat"), or from the Days option; the itinerary milestone needs at least three days covered, so a one- or two-day trip cannot complete it.
