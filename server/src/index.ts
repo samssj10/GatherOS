@@ -1,23 +1,13 @@
-import express from 'express';
-import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
+import path from 'node:path';
+import { createApp } from './app';
 import { env } from './utils/env';
 import { logger } from './utils/logger';
-import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
-import { apiLimiter } from './middlewares/rateLimiter';
-import { requestLogger } from './middlewares/requestLogger';
-import { apiRouter } from './routes';
 
-const app = express();
+// server/src and server/dist both sit one level under server/, so the built client is the same distance away.
+const clientDir = env.SERVE_CLIENT ? path.resolve(__dirname, '../../client/dist') : null;
 
-app.use(helmet());
-app.use(express.json({ limit: '100kb' }));
-app.use(cookieParser());
-app.use(requestLogger);
-app.use('/api', apiLimiter, apiRouter);
-app.use(notFoundHandler);
-app.use(errorHandler);
+const app = createApp({ clientDir, trustProxyHops: env.TRUST_PROXY_HOPS });
 
 app.listen(env.PORT, () => {
-  logger.info({ port: env.PORT }, 'BFF listening');
+  logger.info({ port: env.PORT, servingClient: clientDir !== null, trustProxyHops: env.TRUST_PROXY_HOPS }, 'BFF listening');
 });

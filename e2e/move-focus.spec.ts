@@ -72,10 +72,14 @@ test('the up and down arrows keep focus while the card can still move that way',
   await openDraft(page, 3);
   await page.getByRole('button', { name: 'Move E2E Day 1 keynote later on Day 1' }).focus();
   await page.keyboard.press('Enter');
-  // The keynote is now second of three, so "later" is still available and still focused.
+  // Wait for the move to land (the keynote is second of three) before judging where focus is: the
+  // button had focus before the move too, so focus alone proves nothing yet.
+  await expect(column(page, 1).getByTestId('schedule-card').nth(1)).toContainText('E2E Day 1 keynote');
+  // "later" is still available for a second-of-three card, and still focused.
   await expect(page.getByRole('button', { name: 'Move E2E Day 1 keynote later on Day 1' })).toBeFocused();
 
   await page.keyboard.press('Enter');
+  await expect(column(page, 1).getByTestId('schedule-card').nth(2)).toContainText('E2E Day 1 keynote');
   // Now it is last: the arrow is disabled, so focus is on the card.
   await expect(card(page, 1, 'E2E Day 1 keynote')).toBeFocused();
 });
