@@ -52,7 +52,7 @@
 
 - **Mission control.** A readiness hero tells you the one thing to do next ("14 more yeses to fill half the house"), backed by four milestones: plan every day of the trip (three by default, up to seven), keep spend under half the budget, reach Half House (half the invitees accepted) and get everyone to answer. Completing them raises your **host rank**, shown in the sidebar.
 - **AI itinerary drafts.** Describe the offsite, optionally set the city, days and attendee count, and Claude returns a structured itinerary. It lands on the board as an *unsaved draft*; milestones, rank and budget recalculate for it until you save or discard it.
-- **Drag-and-drop itinerary.** Reorder sessions within a day or drop them onto another day, by mouse or keyboard. Every card also has up, down, previous-day and next-day buttons. After any move the affected day is re-timed automatically so sessions run back to back, 15 minutes apart, each keeping its own duration.
+- **Drag-and-drop itinerary.** Reorder sessions within a day or drop them onto another day, by mouse or keyboard. Every card also has up, down, previous-day and next-day buttons, and keyboard focus stays with the card after any move. After any move the affected day is re-timed automatically so sessions run back to back, 15 minutes apart, each keeping its own duration.
 - **Long trips are paged.** A trip of up to three days shows every day. Longer trips (up to seven) show three days at a time, with a jump bar of Day buttons, previous and next buttons and dashed side strips that name the neighbouring days. Drop a session on any Day button to send it to the end of that day, even when that day is on another page; with the keyboard, pick a session up with Space, Tab along the Day buttons and drop with Space. Each session also has a *Move to another day* select. Every cross-day move says where the session landed and its new time, offers *View Day N* when that day is off screen, and **Undo** puts both days back exactly as they were, including the gaps that re-timing closed.
 - **Room check-in code.** Every saved session card has a **Code** button that opens a full-screen display for the room: a QR code, a six-character code under it, a countdown to the next code and a live "checked in n of N" bar. The code changes every minute and only works while the session is live.
 - **Budget breakdown.** A stacked bar by category (meals, activities, workshops, keynotes) with an "on track", "close to the limit" or "over budget" status.
@@ -260,7 +260,7 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 
 **Unit tests (Vitest, 175 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
 
-**End-to-end (Playwright).** Four specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
+**End-to-end (Playwright).** Five specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
 
 1. Inject a signed planner cookie to bypass the login screen.
 2. Intercept `POST /api/ai/generate-schedule` with `page.route()` and return a hardcoded valid response.
@@ -269,6 +269,8 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 5. Delay the RSVP request by 500 ms, click *I'm in*, assert the UI updates before the response arrives, then assert the success toast.
 
 [`e2e/attendee-journey.spec.ts`](e2e/attendee-journey.spec.ts) covers the attendee's paged journey with the schedule mocked at the network: the jump bar, the strips, opening on the live or next session, a trip that skips a day, and the unchanged three-day and phone layouts.
+
+[`e2e/move-focus.spec.ts`](e2e/move-focus.spec.ts) checks that keyboard focus follows a session when it moves (the arrows, the day select and a keyboard drag), so a keyboard or screen-reader user is never dropped back to the top of the page.
 
 [`e2e/itinerary-moves.spec.ts`](e2e/itinerary-moves.spec.ts) covers long trips on a mocked five-day draft: dragging a session onto a Day button, the toast with *View* and *Undo*, a keyboard drag along the Day buttons (and Escape to cancel), the *Move to another day* select, and the server refusing anything but a valid day and times on `PUT /schedule/timing`.
 
