@@ -123,3 +123,46 @@ test('the timing endpoint refuses sessions that do not exist and anything but da
   expect((await put([{ ...entry, startTime: '11:00' }])).status()).toBe(400);
   expect((await put([])).status()).toBe(400);
 });
+
+// Names every button, link and select that sticks out of its session card.
+async function controlsOutsideTheirCard(page: Page): Promise<string[]> {
+  return page.getByTestId('schedule-card').evaluateAll((cards) => {
+    const out: string[] = [];
+    for (const card of cards) {
+      const box = card.getBoundingClientRect();
+      for (const control of card.querySelectorAll('button, a, select')) {
+        const rect = control.getBoundingClientRect();
+        if (rect.width === 0) continue;
+        if (rect.left < box.left - 0.5 || rect.right > box.right + 0.5) {
+          out.push(control.getAttribute('aria-label') ?? control.textContent?.trim() ?? control.tagName);
+        }
+      }
+    }
+    return out;
+  });
+}
+
+test('on a saved itinerary no card control sticks out of its card, even in narrow columns', async ({ page }) => {
+  await page.context().addCookies([sessionCookie(plannerSession)]);
+  await page.goto('/planner');
+  await expect(page.getByTestId('schedule-card').first()).toBeVisible();
+  // Saved sessions carry the Code button, so this is the widest footer a card gets.
+  await expect(page.getByRole('link', { name: /^Show check-in code for/ }).first()).toBeVisible();
+
+  for (const width of [1100, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await controlsOutsideTheirCard(page), `controls outside their card at ${width}px`).toEqual([]);
+  }
+});
+
+test('on a paged draft, with the day select, no card control sticks out of its card', async ({ page }) => {
+  await openFiveDayDraft(page);
+  await expect(page.getByRole('combobox', { name: /^Move .+ to another day$/ }).first()).toBeVisible();
+
+  for (const width of [1100, 1280]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await controlsOutsideTheirCard(page), `controls outside their card at ${width}px`).toEqual([]);
+  }
+  await page.getByRole('button', { name: 'Show next days', exact: true }).click();
+  expect(await controlsOutsideTheirCard(page), 'controls outside their card on page 2').toEqual([]);
+});

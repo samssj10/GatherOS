@@ -121,13 +121,12 @@ function CardBody({
           {item.location}
         </span>
       </div>
-      <div className="flex items-center justify-between pl-8.5">
-        <div className="flex items-center gap-2.5">
-          <span className="font-mono text-sm font-semibold">{formatCurrency(item.costEstimate)}</span>
-          {afterCost}
-        </div>
-        {actions}
+      {/* Three fixed lines (price and code, arrows, day select) so nothing overflows a narrow column. */}
+      <div className="flex items-center gap-2.5 pl-8.5">
+        <span className="font-mono text-sm font-semibold">{formatCurrency(item.costEstimate)}</span>
+        {afterCost}
       </div>
+      {actions && <div className="flex justify-end">{actions}</div>}
       {moveControl && <div className="pl-8.5">{moveControl}</div>}
     </>
   );
