@@ -90,3 +90,48 @@ test('planner generates an AI itinerary, then an attendee RSVPs with optimistic 
   await expect(toast).toContainText('RSVP accepted');
   expect(serverResponded).toBe(true);
 });
+
+test('a five-day prompt asks for five days and fills a five-column board', async ({ page, context }) => {
+  await context.addCookies([sessionCookie(plannerSession)]);
+
+  const slots = [
+    ['09:00', '10:00', 'keynote'],
+    ['12:00', '13:00', 'meal'],
+  ] as const;
+  const items = [1, 2, 3, 4, 5].flatMap((day) =>
+    slots.map(([startTime, endTime, category], index) => ({
+      id: `ai-${day}-${index}`,
+      day,
+      startTime,
+      endTime,
+      title: `E2E Day ${day} ${category}`,
+      description: 'Mocked',
+      location: 'Main Hall',
+      category,
+      costEstimate: 500,
+    })),
+  );
+
+  let requestedDays: number | undefined;
+  await page.route('**/api/ai/generate-schedule', async (route) => {
+    requestedDays = (route.request().postDataJSON() as { days: number }).days;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items }) });
+  });
+
+  await page.goto('/planner');
+  await expect(page.getByRole('group', { name: /^Day \d$/ })).toHaveCount(3);
+
+  await page.getByLabel('Describe the offsite you want to plan').fill('5-day leadership retreat in Lisbon');
+  await expect(page.getByText('Planning 5 days, from your prompt.')).toBeVisible();
+  await page.getByRole('button', { name: 'Generate draft' }).click();
+
+  await expect(page.getByTestId('draft-banner')).toContainText('10 sessions');
+  expect(requestedDays).toBe(5);
+  await expect(page.getByRole('group', { name: /^Day \d$/ })).toHaveCount(5);
+  await expect(page.getByRole('group', { name: 'Day 5' }).getByRole('heading', { level: 3, name: 'E2E Day 5 keynote' })).toBeVisible();
+  await expect(page.getByText('Company offsite · 5 days')).toBeVisible();
+  await expect(page.getByText('Build a 5-day itinerary')).toBeVisible();
+
+  // Nothing sits past the last day, so its "next day" arrow is disabled.
+  await expect(page.getByRole('button', { name: 'E2E Day 5 keynote is already on the last day' })).toBeDisabled();
+});

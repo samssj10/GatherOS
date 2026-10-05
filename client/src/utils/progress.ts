@@ -1,7 +1,15 @@
 import type { AttendeeSummary, ScheduleItem } from '@/types';
+import { eventDayNumbers } from '@/utils/eventLength';
 import { formatCurrency, formatNumber } from '@/utils/format';
 
-export const EVENT_DAYS = [1, 2, 3] as const;
+const DAY_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'];
+
+/** "Day 2 has", "Day 2 and 3 have", "Days 1, 2 and 4 have". */
+function describeMissingDays(days: number[]): string {
+  if (days.length === 1) return `Day ${days[0]} has`;
+  const head = days.slice(0, -1).join(', ');
+  return `${days.length === 2 ? 'Day' : 'Days'} ${head} and ${days[days.length - 1]} have`;
+}
 
 /** Planner ranks, indexed by how many milestones are complete (0 to 4). */
 const HOST_RANKS = ['Scout', 'Pathfinder', 'Trail Builder', 'Trailblazer', 'Summit Host'] as const;
@@ -36,22 +44,23 @@ export function halfHouseTarget(total: number): number {
 }
 
 export function buildMilestones({ items, budget, summary }: PlannerNumbers): Milestone[] {
-  const daysCovered = new Set(items.map((item) => item.day).filter((day) => EVENT_DAYS.some((d) => d === day)));
+  const eventDays = eventDayNumbers(items);
+  const daysCovered = new Set(items.map((item) => item.day));
   const spendPct = budget > 0 ? (spendOf(items) / budget) * 100 : 0;
   const target = halfHouseTarget(summary.total);
   const accepted = summary.rsvp.accepted;
   const answered = summary.rsvp.accepted + summary.rsvp.declined;
 
-  const itineraryDone = daysCovered.size === EVENT_DAYS.length;
+  const itineraryDone = eventDays.every((day) => daysCovered.has(day));
   // Zero spend on an empty itinerary must not count as "under budget".
   const budgetDone = items.length > 0 && spendPct <= 50;
 
   return [
     {
       id: 'itinerary',
-      title: 'Build a 3-day itinerary',
+      title: `Build a ${eventDays.length}-day itinerary`,
       meta: `${items.length} session${items.length === 1 ? '' : 's'}`,
-      pct: clamp((daysCovered.size / EVENT_DAYS.length) * 100),
+      pct: clamp((eventDays.filter((day) => daysCovered.has(day)).length / eventDays.length) * 100),
       done: itineraryDone,
     },
     {
@@ -123,11 +132,12 @@ export function nextUnlock({ items, budget, summary }: PlannerNumbers, milestone
       };
     case 'itinerary': {
       const covered = new Set(items.map((item) => item.day));
-      const missing = EVENT_DAYS.filter((day) => !covered.has(day));
+      const eventDays = eventDayNumbers(items);
+      const missing = eventDays.filter((day) => !covered.has(day));
       return {
         eyebrow: 'Next unlock · Full itinerary',
-        title: 'Plan all three days',
-        body: `Day ${missing.join(' and ')} ${missing.length === 1 ? 'has' : 'have'} no sessions yet. Add some, or generate a draft with the bar above.`,
+        title: `Plan all ${DAY_WORDS[eventDays.length] ?? eventDays.length} days`,
+        body: `${describeMissingDays(missing)} no sessions yet. Add some, or generate a draft with the bar above.`,
         allDone: false,
       };
     }

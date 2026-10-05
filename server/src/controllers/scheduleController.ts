@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getSession } from '../middlewares/auth';
 import * as checkInService from '../services/checkInService';
 import * as scheduleService from '../services/scheduleService';
-import { MAX_EVENT_DAYS, scheduleItemSchema } from '../utils/scheduleSchema';
+import { MAX_EVENT_DAYS, MAX_SCHEDULE_ITEMS, scheduleItemSchema } from '../utils/scheduleSchema';
 
 export const listSchedule: RequestHandler = (_req, res) => {
   res.json(scheduleService.listSchedule());
@@ -35,7 +35,7 @@ export const reorderDayBodySchema = z
   .strict();
 
 export const replaceScheduleBodySchema = z
-  .object({ items: z.array(scheduleItemSchema).min(1).max(60) })
+  .object({ items: z.array(scheduleItemSchema).min(1).max(MAX_SCHEDULE_ITEMS) })
   .strict()
   .refine((body) => new Set(body.items.map((item) => item.id)).size === body.items.length, {
     message: 'Schedule item ids must be unique',
