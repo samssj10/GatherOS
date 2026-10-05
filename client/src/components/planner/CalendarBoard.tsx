@@ -46,6 +46,7 @@ import { DroppableDayChip } from '@/components/planner/ItineraryPager';
 import Skeleton from '@/components/Skeleton';
 import { useDayPaging } from '@/hooks/useDayPaging';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useMoveFocus } from '@/hooks/useMoveFocus';
 import { useUiStore } from '@/store/uiStore';
 import type { ScheduleItem } from '@/types';
 import { CHIP_PREFIX, COLUMN_PREFIX, byStartTime, idsOnDay, resolveDrop } from '@/utils/dropTarget';
@@ -166,6 +167,7 @@ function ScheduleCard({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       data-testid="schedule-card"
       data-item-id={item.id}
+      tabIndex={-1}
       className={`flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-sm transition-shadow hover:shadow-md ${
         isDragging ? 'opacity-40' : ''
       }`}
@@ -189,6 +191,7 @@ function ScheduleCard({
           dayChoices && (
             <select
               aria-label={`Move ${item.title} to another day`}
+              data-move="day"
               value=""
               onChange={(event) => {
                 const day = Number(event.target.value);
@@ -224,6 +227,7 @@ function ScheduleCard({
             <button
               type="button"
               disabled={isFirst}
+              data-move="earlier"
               onClick={() => onShiftPosition(item, -1)}
               aria-label={isFirst ? `${item.title} is already first on Day ${item.day}` : `Move ${item.title} earlier on Day ${item.day}`}
               className={cardActionClass}
@@ -233,6 +237,7 @@ function ScheduleCard({
             <button
               type="button"
               disabled={isLast}
+              data-move="later"
               onClick={() => onShiftPosition(item, 1)}
               aria-label={isLast ? `${item.title} is already last on Day ${item.day}` : `Move ${item.title} later on Day ${item.day}`}
               className={cardActionClass}
@@ -242,6 +247,7 @@ function ScheduleCard({
             <button
               type="button"
               disabled={item.day === FIRST_DAY}
+              data-move="previous-day"
               onClick={() => onShiftDay(item, -1)}
               aria-label={
                 item.day === FIRST_DAY
@@ -255,6 +261,7 @@ function ScheduleCard({
             <button
               type="button"
               disabled={item.day === lastDay}
+              data-move="next-day"
               onClick={() => onShiftDay(item, 1)}
               aria-label={
                 item.day === lastDay
@@ -377,6 +384,7 @@ export default function CalendarBoard() {
   const items = draft ?? saved.data ?? [];
   const days = eventDayNumbers(items);
   const paging = useDayPaging(days);
+  const rememberMove = useMoveFocus(items);
 
   // Opening or closing an AI draft starts the board back on its first page.
   const hasDraft = draft != null;
@@ -496,17 +504,23 @@ export default function CalendarBoard() {
 
   const shiftDay = (item: ScheduleItem, delta: -1 | 1) => {
     const day = item.day + delta;
-    requestReorder(day, [...idsOnDay(items, day), item.id], item);
+    if (requestReorder(day, [...idsOnDay(items, day), item.id], item)) {
+      rememberMove(item, delta === -1 ? 'previous-day' : 'next-day');
+    }
   };
 
   const moveToDay = (item: ScheduleItem, day: number) => {
-    if (day !== item.day) requestReorder(day, [...idsOnDay(items, day), item.id], item);
+    if (day !== item.day && requestReorder(day, [...idsOnDay(items, day), item.id], item)) {
+      rememberMove(item, 'day');
+    }
   };
 
   const shiftPosition = (item: ScheduleItem, delta: -1 | 1) => {
     const ids = idsOnDay(items, item.day);
     const from = ids.indexOf(item.id);
-    requestReorder(item.day, arrayMove(ids, from, from + delta));
+    if (requestReorder(item.day, arrayMove(ids, from, from + delta))) {
+      rememberMove(item, delta === -1 ? 'earlier' : 'later');
+    }
   };
 
   const chooseKeyboardTarget = (day: number | null) => {
@@ -536,6 +550,7 @@ export default function CalendarBoard() {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    const wasKeyboardDrag = keyboardDrag;
     setActiveId(null);
     setHint(null);
     setOverDayButton(false);
@@ -552,7 +567,11 @@ export default function CalendarBoard() {
     const dragged = items.find((item) => item.id === String(event.active.id));
     if (unchanged) return;
     const moved = target.crossDay ? dragged : undefined;
-    if (requestReorder(target.day, target.orderedIds, moved) && target.viaDayButton) flash(target.day);
+    if (requestReorder(target.day, target.orderedIds, moved)) {
+      if (target.viaDayButton) flash(target.day);
+      // A drag with the keyboard ends with focus on the card's handle, wherever the card has gone.
+      if (wasKeyboardDrag && dragged) rememberMove(dragged, 'handle');
+    }
   };
 
   const cancelDrag = () => {
@@ -563,7 +582,7 @@ export default function CalendarBoard() {
   };
 
   return (
-    <section id="itinerary" aria-labelledby="calendar-title" className="flex scroll-mt-24 flex-col gap-4">
+    <section id="itinerary" aria-labelledby="calendar-title" tabIndex={-1} className="flex scroll-mt-24 flex-col gap-4 outline-none">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="calendar-title" className="font-display text-2xl font-bold">
           Itinerary
