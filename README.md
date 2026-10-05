@@ -62,7 +62,7 @@
 ### For attendees (phone and desktop)
 
 - **Home.** Level, rank and XP at a glance. The RSVP is a quest ("Are you in?") with an optimistic UI that responds instantly and rolls back on failure. A pre-trip checklist and a "first stop" teaser follow. On desktop the page becomes two columns with a "Day 1 at a glance" card.
-- **Journey.** On a phone: day tabs and a stop-by-stop timeline. On desktop: a stamp progress strip and one column per day. Check-in opens when a session starts and closes when it ends. While one is live, **scan the QR code** on the room screen with your phone's camera, or **type the six-character code** (on desktop, or when the camera is unavailable), to collect its stamp and XP.
+- **Journey.** On a phone: day tabs and a stop-by-stop timeline. On desktop: a stamp progress strip and one column per day; a trip longer than three days is paged three days at a time, with the same jump bar and side strips as the planner's board, and opens on the page with the live or next session. Check-in opens when a session starts and closes when it ends. While one is live, **scan the QR code** on the room screen with your phone's camera, or **type the six-character code** (on desktop, or when the camera is unavailable), to collect its stamp and XP.
 - **Passport.** Your stamps, six badges (Early Responder, Fuelled Up, Jet Set, Front Row, Sea Legs, Full House) and a **team race** showing the share of each department that is going. On desktop it opens with a hero of XP, stamps and badges.
 - **Dietary quest.** Four large options, saved instantly, with a "Meals on this trip" list.
 - Touch targets of at least 44px. A four-tab bottom navigation on phones and a top navigation bar, with your level and XP, on desktop.
@@ -258,15 +258,17 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 
 ## Testing and CI
 
-**Unit tests (Vitest, 168 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
+**Unit tests (Vitest, 175 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
 
-**End-to-end (Playwright).** Three specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
+**End-to-end (Playwright).** Four specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
 
 1. Inject a signed planner cookie to bypass the login screen.
 2. Intercept `POST /api/ai/generate-schedule` with `page.route()` and return a hardcoded valid response.
 3. Assert the three-column board renders the mocked sessions in the right days.
 4. Clear cookies, inject an attendee cookie and reload.
 5. Delay the RSVP request by 500 ms, click *I'm in*, assert the UI updates before the response arrives, then assert the success toast.
+
+[`e2e/attendee-journey.spec.ts`](e2e/attendee-journey.spec.ts) covers the attendee's paged journey with the schedule mocked at the network: the jump bar, the strips, opening on the live or next session, a trip that skips a day, and the unchanged three-day and phone layouts.
 
 [`e2e/itinerary-moves.spec.ts`](e2e/itinerary-moves.spec.ts) covers long trips on a mocked five-day draft: dragging a session onto a Day button, the toast with *View* and *Undo*, a keyboard drag along the Day buttons (and Escape to cancel), the *Move to another day* select, and the server refusing anything but a valid day and times on `PUT /schedule/timing`.
 
