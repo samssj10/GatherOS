@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   clampPage,
-  daySpanLabel,
+  daysLabel,
   daysOnPage,
   isPaged,
   neighbourPages,
@@ -76,9 +76,16 @@ describe('daysOnPage', () => {
 });
 
 describe('labels', () => {
-  it('names a single day or a span', () => {
-    expect(daySpanLabel(4, 4)).toBe('Day 4');
-    expect(daySpanLabel(4, 6)).toBe('Days 4–6');
+  it('names a single day, a run or a list when the trip skips a day', () => {
+    expect(daysLabel([4])).toBe('Day 4');
+    expect(daysLabel([4, 5, 6])).toBe('Days 4–6');
+    expect(daysLabel([1, 2, 4])).toBe('Days 1, 2 and 4');
+    expect(daysLabel([])).toBe('');
+  });
+
+  it('labels a page that skips a day by the days it really has', () => {
+    expect(rangeLabel([1, 2, 4, 5], 0)).toBe('Days 1, 2 and 4 of 4');
+    expect(neighbourPages([1, 2, 4, 5], 0)).toEqual({ previous: null, next: 'Day 5' });
   });
 
   it('writes the toolbar range', () => {
