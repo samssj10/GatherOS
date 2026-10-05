@@ -10,8 +10,9 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type {
-  Active,
+  Announcements,
   CollisionDetection,
+  Modifier,
   DragEndEvent,
   DragMoveEvent,
   DragStartEvent,
@@ -35,20 +36,41 @@ import {
   MapPin,
   QrCode,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { usePlannerSchedule, useReorderDay, useScheduleDraft } from '@/api/schedule';
+import { usePlannerSchedule, useReorderDay, useRestoreTiming, useScheduleDraft } from '@/api/schedule';
 import ErrorNotice from '@/components/ErrorNotice';
+import { DayJumpBar, PageRail } from '@/components/planner/ItineraryPager';
 import Skeleton from '@/components/Skeleton';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useUiStore } from '@/store/uiStore';
 import type { ScheduleItem } from '@/types';
+import { CHIP_PREFIX, COLUMN_PREFIX, byStartTime, idsOnDay, resolveDrop } from '@/utils/dropTarget';
 import { eventDayNumbers } from '@/utils/eventLength';
 import { categoryLabel, categoryStyle, formatCurrency } from '@/utils/format';
+import { clampPage, daysOnPage, isPaged, neighbourPages, pageCount, pageOfDay } from '@/utils/itineraryPages';
 import { reflowDay } from '@/utils/reflow';
+import { timingsOf } from '@/utils/restoreTiming';
 
 const FIRST_DAY = 1;
-const COLUMN_PREFIX = 'day-';
+
+/**
+ * Over a Day button the floating card steps down and aside so it does not cover the button it is about
+ * to drop on, or the tooltip under it.
+ */
+const stepAside =
+  (focusedDayButton: boolean): Modifier =>
+  ({ over, transform }) =>
+    focusedDayButton || (over && String(over.id).startsWith(CHIP_PREFIX))
+      ? { ...transform, x: transform.x + 28, y: transform.y + 96 }
+      : transform;
+
+/**
+ * dnd-kit ends a keyboard drag on Tab by default. Here Tab walks the Day buttons instead, so only
+ * Space and Enter drop, and Escape cancels.
+ */
+const keyboardCodes = { start: ['Space', 'Enter'], cancel: ['Escape'], end: ['Space', 'Enter'] };
 
 const cardActionClass =
   'flex size-8 items-center justify-center rounded-lg bg-canvas text-ink transition-colors hover:bg-line disabled:pointer-events-none disabled:opacity-35';
@@ -62,81 +84,21 @@ const collisionDetection: CollisionDetection = (args) => {
   return underPointer.length > 0 ? underPointer : closestCorners(args);
 };
 
-const byStartTime = (a: ScheduleItem, b: ScheduleItem) => a.startTime.localeCompare(b.startTime);
-
-const idsOnDay = (items: ScheduleItem[], day: number): string[] =>
-  items
-    .filter((item) => item.day === day)
-    .sort(byStartTime)
-    .map((item) => item.id);
-
-interface DropTarget {
-  day: number;
-  /** Every session that should be on `day` afterwards, in order. */
-  orderedIds: string[];
-  /** Where the dragged card lands among the destination day's other cards (cross-day only). */
-  index: number;
-  crossDay: boolean;
-}
-
-/** Turns "dragged card X is over Y" into the day, the new order and the landing index. */
-function resolveDrop(active: Active, over: Over | null, items: ScheduleItem[]): DropTarget | null {
-  if (!over) return null;
-  const dragged = items.find((item) => item.id === String(active.id));
-  if (!dragged) return null;
-
-  const overId = String(over.id);
-
-  // Dropped on a column's empty space: append to the end of that day.
-  if (overId.startsWith(COLUMN_PREFIX)) {
-    const day = Number(overId.slice(COLUMN_PREFIX.length));
-    if (day === dragged.day) return null;
-    const destination = idsOnDay(items, day);
-    return { day, orderedIds: [...destination, dragged.id], index: destination.length, crossDay: true };
-  }
-
-  // Dropped on another card.
-  const target = items.find((item) => item.id === overId);
-  if (!target || target.id === dragged.id) return null;
-
-  if (target.day === dragged.day) {
-    const ids = idsOnDay(items, target.day);
-    const to = ids.indexOf(target.id);
-    return {
-      day: target.day,
-      orderedIds: arrayMove(ids, ids.indexOf(dragged.id), to),
-      index: to,
-      crossDay: false,
-    };
-  }
-
-  // Another day: land before or after the hovered card, depending on which half the pointer is in.
-  const destination = idsOnDay(items, target.day);
-  const translated = active.rect.current.translated;
-  const below = translated
-    ? translated.top + translated.height / 2 > over.rect.top + over.rect.height / 2
-    : false;
-  const index = destination.indexOf(target.id) + (below ? 1 : 0);
-  return {
-    day: target.day,
-    orderedIds: [...destination.slice(0, index), dragged.id, ...destination.slice(index)],
-    index,
-    crossDay: true,
-  };
-}
-
 /** Pure presentation, shared by the in-column card and the floating drag preview. */
 function CardBody({
   item,
   handle,
   actions,
   afterCost,
+  moveControl,
 }: {
   item: ScheduleItem;
   handle?: ReactNode;
   actions?: ReactNode;
   /** Sits right after the price, e.g. the check-in code link. */
   afterCost?: ReactNode;
+  /** A full-width row under the arrows, for jumping straight to any day. */
+  moveControl?: ReactNode;
 }) {
   const style = categoryStyle(item.category);
 
@@ -166,6 +128,7 @@ function CardBody({
         </div>
         {actions}
       </div>
+      {moveControl && <div className="pl-8.5">{moveControl}</div>}
     </>
   );
 }
@@ -177,6 +140,10 @@ interface CardCallbacks {
   showCode: boolean;
   /** The last day on the board; a session cannot move past it. */
   lastDay: number;
+  /** Moves a session to the end of another day in one step. */
+  onMoveToDay: (item: ScheduleItem, day: number) => void;
+  /** Every day a session can be sent to by name; null on a short trip, where the arrows are enough. */
+  dayChoices: number[] | null;
 }
 
 function ScheduleCard({
@@ -187,6 +154,8 @@ function ScheduleCard({
   onShiftPosition,
   showCode,
   lastDay,
+  onMoveToDay,
+  dayChoices,
 }: CardCallbacks & { item: ScheduleItem; isFirst: boolean; isLast: boolean }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
@@ -215,6 +184,26 @@ function ScheduleCard({
           >
             <GripVertical className="size-4" aria-hidden="true" />
           </button>
+        }
+        moveControl={
+          dayChoices && (
+            <select
+              aria-label={`Move ${item.title} to another day`}
+              value=""
+              onChange={(event) => {
+                const day = Number(event.target.value);
+                if (day) onMoveToDay(item, day);
+              }}
+              className="h-8 w-full cursor-pointer rounded-lg bg-canvas px-2 text-xs font-medium text-ink transition-colors hover:bg-line"
+            >
+              <option value="">Move to another day…</option>
+              {dayChoices.map((day) => (
+                <option key={day} value={day} disabled={day === item.day}>
+                  Day {day}
+                </option>
+              ))}
+            </select>
+          )
         }
         afterCost={
           showCode ? (
@@ -370,36 +359,164 @@ export default function CalendarBoard() {
   const saved = usePlannerSchedule();
   const draft = useScheduleDraft().data;
   const reorder = useReorderDay();
+  const restoreTiming = useRestoreTiming();
   const addToast = useUiStore((state) => state.addToast);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hint, setHint] = useState<{ day: number; index: number } | null>(null);
+  const [page, setPage] = useState(0);
+  // The Day button that just received a card flashes lime briefly (skipped for reduced motion).
+  const [overDayButton, setOverDayButton] = useState(false);
+  // A keyboard drag walks the Day buttons with Tab; this is the one that has focus, if any.
+  const [keyboardDrag, setKeyboardDrag] = useState(false);
+  const [keyboardDay, setKeyboardDay] = useState<number | null>(null);
+  const keyboardDayRef = useRef<number | null>(null);
+  const [flashDay, setFlashDay] = useState<number | null>(null);
+  const flashTimer = useRef<number | undefined>(undefined);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  useEffect(() => () => window.clearTimeout(flashTimer.current), []);
+  const previousButton = useRef<HTMLButtonElement>(null);
+  const nextButton = useRef<HTMLButtonElement>(null);
+  const focusAfterTurn = useRef<'previous' | 'next' | null>(null);
+
+  // Opening or closing an AI draft starts the board back on its first page.
+  const hasDraft = draft != null;
+  const [sawDraft, setSawDraft] = useState(hasDraft);
+  if (hasDraft !== sawDraft) {
+    setSawDraft(hasDraft);
+    setPage(0);
+  }
 
   // Pointer drag needs a few pixels of travel so plain clicks on a card never start a drag.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes }),
   );
 
   const items = draft ?? saved.data ?? [];
   const days = eventDayNumbers(items);
-  const lastDay = days[days.length - 1];
+  const dayCount = days.length;
+  const lastDay = days[dayCount - 1];
+  const paged = isPaged(days.length);
+  const currentPage = clampPage(page, days.length);
+  const visibleDays = paged ? daysOnPage(days, currentPage) : days;
+  const neighbours = neighbourPages(days, currentPage);
+
+  // A button that turns the page may disable or remove itself, so hand focus to the one that still works.
+  useEffect(() => {
+    const wanted = focusAfterTurn.current;
+    focusAfterTurn.current = null;
+    if (!wanted) return;
+    const canNext = currentPage < pageCount(days.length) - 1;
+    const canPrevious = currentPage > 0;
+    const useNext = wanted === 'next' ? canNext || !canPrevious : !canPrevious && canNext;
+    (useNext ? nextButton : previousButton).current?.focus();
+  }, [currentPage, days.length]);
   const activeItem = items.find((item) => item.id === activeId) ?? null;
+  const sourceDay = activeItem?.day ?? null;
+
+  // While a card is picked up with the keyboard, Tab and Shift+Tab walk the Day buttons (every day but
+  // the card's own), the arrow keys go back to moving the card around the board, and Space drops.
+  useEffect(() => {
+    if (!keyboardDrag || sourceDay === null) return;
+    const targets = Array.from({ length: dayCount }, (_, index) => index + 1).filter((day) => day !== sourceDay);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.startsWith('Arrow')) {
+        keyboardDayRef.current = null;
+        setKeyboardDay(null);
+        return;
+      }
+      if (event.key !== 'Tab' || targets.length === 0) return;
+      event.preventDefault();
+      const at = keyboardDayRef.current === null ? -1 : targets.indexOf(keyboardDayRef.current);
+      const step = event.shiftKey ? -1 : 1;
+      const next = targets[at === -1 ? (step === 1 ? 0 : targets.length - 1) : (at + step + targets.length) % targets.length];
+      keyboardDayRef.current = next;
+      setKeyboardDay(next);
+      document.querySelector<HTMLButtonElement>(`nav[aria-label="Jump to day"] button[data-day="${next}"]`)?.focus();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [keyboardDrag, sourceDay, dayCount]);
 
   if (saved.isError && !draft) {
     return <ErrorNotice message="Could not load the itinerary." onRetry={() => void saved.refetch()} />;
   }
 
-  const requestReorder = (day: number, orderedIds: string[]) => {
-    if (!reflowDay(items, day, orderedIds)) {
+  const flash = (day: number) => {
+    if (reducedMotion) return;
+    window.clearTimeout(flashTimer.current);
+    setFlashDay(day);
+    flashTimer.current = window.setTimeout(() => setFlashDay(null), 600);
+  };
+
+  /**
+   * Re-times `day` to the given order. Pass `moved` when a session is coming from another day: the
+   * confirmation then names where it landed and offers View and Undo. Returns false (with a toast)
+   * when the day has no room for the change.
+   */
+  const requestReorder = (day: number, orderedIds: string[], moved?: ScheduleItem): boolean => {
+    const result = reflowDay(items, day, orderedIds);
+    if (!result) {
       addToast('error', `There is not enough room left in Day ${day} for that.`);
-      return;
+      return false;
     }
-    reorder.mutate({ day, orderedIds });
+    if (!moved) {
+      reorder.mutate({ day, orderedIds });
+      return true;
+    }
+
+    // Everything on the two days involved is re-timed, so remember how they were to put them back exactly.
+    const before = timingsOf(items.filter((item) => item.day === moved.day || item.day === day));
+    const landed = result.find((item) => item.id === moved.id) ?? moved;
+    const shownNow = visibleDays.includes(day);
+    reorder.mutate(
+      { day, orderedIds, quiet: true },
+      {
+        onSuccess: () =>
+          addToast('success', `Moved ${moved.title} to Day ${day} · ${landed.startTime} – ${landed.endTime}`, {
+            actions: [
+              // The board stays where it is after a move; offer the jump only when the card is out of sight.
+              ...(shownNow
+                ? []
+                : [{ label: `View Day ${day}`, variant: 'primary' as const, onClick: () => turnPage(pageOfDay(day)) }]),
+              { label: 'Undo', onClick: () => restoreTiming.mutate(before) },
+            ],
+          }),
+      },
+    );
+    return true;
+  };
+
+  const titleOf = (id: string | number) => items.find((item) => item.id === String(id))?.title ?? 'the session';
+
+  // Spoken while dragging. The Day buttons say where a drop would land; after a drop the toast speaks.
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `Picked up ${titleOf(active.id)}.`,
+    onDragOver: ({ active, over }) => {
+      if (!over) return undefined;
+      const overId = String(over.id);
+      if (overId.startsWith(CHIP_PREFIX)) {
+        const day = Number(overId.slice(CHIP_PREFIX.length));
+        if (day === activeItem?.day) return undefined;
+        return `Over Day ${day}. Drop to add ${titleOf(active.id)} to the end of Day ${day}`;
+      }
+      if (overId.startsWith(COLUMN_PREFIX)) return `Over Day ${overId.slice(COLUMN_PREFIX.length)}.`;
+      return `Over ${titleOf(overId)}.`;
+    },
+    onDragEnd: ({ active, over }) =>
+      over && String(over.id).startsWith(CHIP_PREFIX) ? undefined : `Dropped ${titleOf(active.id)}.`,
+    onDragCancel: ({ active }) => `Moving ${titleOf(active.id)} was cancelled.`,
   };
 
   const shiftDay = (item: ScheduleItem, delta: -1 | 1) => {
     const day = item.day + delta;
-    requestReorder(day, [...idsOnDay(items, day), item.id]);
+    requestReorder(day, [...idsOnDay(items, day), item.id], item);
+  };
+
+  const moveToDay = (item: ScheduleItem, day: number) => {
+    if (day !== item.day) requestReorder(day, [...idsOnDay(items, day), item.id], item);
   };
 
   const shiftPosition = (item: ScheduleItem, delta: -1 | 1) => {
@@ -408,12 +525,33 @@ export default function CalendarBoard() {
     requestReorder(item.day, arrayMove(ids, from, from + delta));
   };
 
-  const handleDragStart = (event: DragStartEvent) => setActiveId(String(event.active.id));
+  const turnPage = (target: number, direction?: 'previous' | 'next') => {
+    const next = clampPage(target, days.length);
+    if (next === currentPage) return;
+    focusAfterTurn.current = direction ?? null;
+    setPage(next);
+  };
+
+  const chooseKeyboardTarget = (day: number | null) => {
+    keyboardDayRef.current = day;
+    setKeyboardDay(day);
+  };
+
+  const clearKeyboardTarget = () => {
+    chooseKeyboardTarget(null);
+    setKeyboardDrag(false);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+    setKeyboardDrag(event.activatorEvent instanceof KeyboardEvent);
+  };
 
   // onDragMove (not onDragOver) so the marker follows the pointer between the top and bottom half
   // of the hovered card, not just when the hovered card changes.
   const handleDragMove = (event: DragMoveEvent) => {
     const target = resolveDrop(event.active, event.over, items);
+    setOverDayButton(target?.viaDayButton ?? false);
     const next = target?.crossDay ? { day: target.day, index: target.index } : null;
     setHint((previous) =>
       previous?.day === next?.day && previous?.index === next?.index ? previous : next,
@@ -423,18 +561,28 @@ export default function CalendarBoard() {
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
     setHint(null);
-    const target = resolveDrop(event.active, event.over, items);
+    setOverDayButton(false);
+    // A keyboard drag that Tabbed onto a Day button drops there: the card has no pointer to follow.
+    const keyboardTarget = keyboardDayRef.current;
+    const over = keyboardTarget === null ? event.over : ({ id: `${CHIP_PREFIX}${keyboardTarget}` } as Over);
+    clearKeyboardTarget();
+    const target = resolveDrop(event.active, over, items);
     if (!target) return;
 
     const unchanged =
       !target.crossDay &&
       idsOnDay(items, target.day).every((id, index) => id === target.orderedIds[index]);
-    if (!unchanged) requestReorder(target.day, target.orderedIds);
+    const dragged = items.find((item) => item.id === String(event.active.id));
+    if (unchanged) return;
+    const moved = target.crossDay ? dragged : undefined;
+    if (requestReorder(target.day, target.orderedIds, moved) && target.viaDayButton) flash(target.day);
   };
 
   const cancelDrag = () => {
     setActiveId(null);
     setHint(null);
+    setOverDayButton(false);
+    clearKeyboardTarget();
   };
 
   return (
@@ -446,6 +594,13 @@ export default function CalendarBoard() {
         <span className="text-sm text-body">Drag cards or use the arrows. Days re-time automatically.</span>
       </div>
 
+      {/* Keyboard drags: says which Day button is focused, as dnd-kit only speaks for pointer targets. */}
+      <p className="sr-only" aria-live="polite">
+        {keyboardDay !== null && activeItem
+          ? `Over Day ${keyboardDay}. Drop to add ${activeItem.title} to the end of Day ${keyboardDay}`
+          : ''}
+      </p>
+
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}
@@ -453,26 +608,72 @@ export default function CalendarBoard() {
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onDragCancel={cancelDrag}
+        accessibility={{ announcements }}
       >
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
-          {days.map((day) => (
-            <DayColumn
-              key={day}
-              day={day}
-              isLoading={saved.isPending && !draft}
-              dropIndex={hint?.day === day ? hint.index : null}
-              items={items.filter((item) => item.day === day).sort(byStartTime)}
-              onShiftDay={shiftDay}
-              onShiftPosition={shiftPosition}
-              showCode={!draft}
-              lastDay={lastDay}
+        {paged && (
+          <DayJumpBar
+            days={days}
+            page={currentPage}
+            sourceDay={activeItem?.day ?? null}
+            flashDay={flashDay}
+            keyboardDay={keyboardDay}
+            onKeyboardBlur={(day) => {
+              if (keyboardDayRef.current === day) chooseKeyboardTarget(null);
+            }}
+            onSelectDay={(day) => turnPage(pageOfDay(day))}
+            onPrevious={() => turnPage(currentPage - 1, 'previous')}
+            onNext={() => turnPage(currentPage + 1, 'next')}
+            previousRef={previousButton}
+            nextRef={nextButton}
+          />
+        )}
+
+        <div className="flex items-stretch gap-3">
+          {paged && neighbours.previous && (
+            <PageRail
+              direction="previous"
+              label={neighbours.previous}
+              onClick={() => turnPage(currentPage - 1, 'previous')}
             />
-          ))}
+          )}
+          {/* auto-fill keeps a lone last day one column wide instead of stretching it across the board. */}
+          <div
+            className={`grid min-w-0 flex-1 gap-4 ${
+              paged
+                ? 'grid-cols-[repeat(auto-fill,minmax(280px,1fr))]'
+                : 'grid-cols-[repeat(auto-fit,minmax(300px,1fr))]'
+            }`}
+          >
+            {visibleDays.map((day) => (
+              <DayColumn
+                key={day}
+                day={day}
+                isLoading={saved.isPending && !draft}
+                dropIndex={hint?.day === day ? hint.index : null}
+                items={items.filter((item) => item.day === day).sort(byStartTime)}
+                onShiftDay={shiftDay}
+                onShiftPosition={shiftPosition}
+                showCode={!draft}
+                lastDay={lastDay}
+                onMoveToDay={moveToDay}
+                dayChoices={paged ? days : null}
+              />
+            ))}
+          </div>
+          {paged && neighbours.next && (
+            <PageRail
+              direction="next"
+              label={neighbours.next}
+              onClick={() => turnPage(currentPage + 1, 'next')}
+            />
+          )}
         </div>
 
-        <DragOverlay>
+        <DragOverlay modifiers={[stepAside(keyboardDay !== null)]}>
           {activeItem ? (
-            <div className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-lg ring-2 ring-brand/40">
+            <div
+              className={`flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-lg ring-2 ring-brand/40 ${overDayButton || keyboardDay !== null ? '-rotate-2' : ''}`}
+            >
               <CardBody item={activeItem} />
             </div>
           ) : null}

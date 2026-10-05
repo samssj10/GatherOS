@@ -26,6 +26,13 @@ scheduleRouter.put(
   validate({ body: controller.replaceScheduleBodySchema }),
   controller.replaceSchedule,
 );
+// Put sessions back on the days and times they had: the exact undo for a move.
+scheduleRouter.put(
+  '/timing',
+  requireRole('planner'),
+  validate({ body: controller.restoreTimingBodySchema }),
+  controller.restoreTiming,
+);
 // Reorder one day (also how a session is moved onto it); the server re-times that day.
 scheduleRouter.put(
   '/days/:day/order',
