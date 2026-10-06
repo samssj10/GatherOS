@@ -13,6 +13,8 @@ const envSchema = z.object({
   // Hosting: serve the built React app from this server, and how many proxies sit in front of it.
   SERVE_CLIENT: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+  // Showcase mode: the event clock loops through Day 1's first session, so one is always live.
+  DEMO_LIVE_LOOP: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
   SESSION_TTL_HOURS: z.coerce.number().positive().default(8),
   PLANNER_EMAIL: z.string().email().default('planner@gatheros.example.com'),

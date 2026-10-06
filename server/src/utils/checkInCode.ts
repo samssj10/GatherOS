@@ -45,15 +45,28 @@ function sameCode(a: string, b: string): boolean {
 /**
  * Checks a submitted code. The current minute's code and the previous one both count, so a scan that
  * straddles the change still works. Older codes are reported as expired; anything else is wrong.
+ *
+ * `oneMinuteAgo` is the event clock as it read a real minute ago. It is normally the previous minute
+ * anyway, but when the clock is looped (showcase mode) it also covers the jump back to the start of
+ * the loop, so a code read just before the jump is still good just after it.
  */
-export function verifyRoomCode(secret: string, sessionId: string, submitted: string, now: Date): CodeCheck {
+export function verifyRoomCode(
+  secret: string,
+  sessionId: string,
+  submitted: string,
+  now: Date,
+  oneMinuteAgo?: Date,
+): CodeCheck {
   const attempt = submitted.trim().toUpperCase();
   const period = codePeriod(now);
+  const valid = new Set([period, period - 1]);
+  if (oneMinuteAgo) valid.add(codePeriod(oneMinuteAgo));
 
-  for (let back = 0; back <= 1; back += 1) {
-    if (sameCode(attempt, codeForPeriod(secret, sessionId, period - back))) return 'valid';
+  for (const candidate of valid) {
+    if (sameCode(attempt, codeForPeriod(secret, sessionId, candidate))) return 'valid';
   }
   for (let back = 2; back <= EXPIRED_LOOKBACK; back += 1) {
+    if (valid.has(period - back)) continue;
     if (sameCode(attempt, codeForPeriod(secret, sessionId, period - back))) return 'expired';
   }
   return 'invalid';

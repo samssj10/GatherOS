@@ -1,5 +1,6 @@
 import type { AttendeeScheduleDTO, ScheduleItem } from '../types';
 import { env } from '../utils/env';
+import { firstSessionWindow, loopedTime } from '../utils/demoClock';
 import { checkInStatus, parseEventDate } from '../utils/eventClock';
 import type { CheckInStatus } from '../utils/eventClock';
 import { reflowDay } from '../utils/reflow';
@@ -26,9 +27,27 @@ export function getBudgetSummary(): BudgetSummary {
   };
 }
 
-/** The event's notion of "now": the real clock, unless EVENT_NOW pins it. */
+/**
+ * What the event clock reads at a given real moment. The real time, unless EVENT_NOW pins it, or
+ * DEMO_LIVE_LOOP plays Day 1's first session on a loop so that one session is always live.
+ */
+export function eventNowAt(real: Date): Date {
+  if (env.EVENT_NOW) return new Date(env.EVENT_NOW);
+  if (env.DEMO_LIVE_LOOP) {
+    const window = firstSessionWindow(db.schedule, parseEventDate(env.EVENT_START_DATE));
+    if (window) return loopedTime(real, window.start, window.end);
+  }
+  return real;
+}
+
+/** The event's notion of "now". */
 export function eventNow(): Date {
-  return env.EVENT_NOW ? new Date(env.EVENT_NOW) : new Date();
+  return eventNowAt(new Date());
+}
+
+/** The event clock as it read `ms` milliseconds of real time ago. */
+export function eventNowAgo(ms: number): Date {
+  return eventNowAt(new Date(Date.now() - ms));
 }
 
 export function sessionCheckInStatus(item: ScheduleItem, now: Date = eventNow()): CheckInStatus {

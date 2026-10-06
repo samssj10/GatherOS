@@ -1,12 +1,12 @@
 import type { Attendee } from '../types';
 import { AppError } from '../utils/AppError';
-import { currentRoomCode, verifyRoomCode } from '../utils/checkInCode';
+import { CODE_PERIOD_MS, currentRoomCode, verifyRoomCode } from '../utils/checkInCode';
 import { checkInDenial } from '../utils/checkInRules';
 import type { CheckInStatus } from '../utils/eventClock';
 import { env } from '../utils/env';
 import { getAttendeeById } from './attendeeService';
 import { db } from './mockDb';
-import { eventNow, sessionCheckInStatus } from './scheduleService';
+import { eventNow, eventNowAgo, sessionCheckInStatus } from './scheduleService';
 
 export interface RoomCodeInfo {
   sessionId: string;
@@ -62,7 +62,7 @@ export function checkIn(attendeeId: string, sessionId: string, submittedCode: st
     rsvpStatus: attendee.rsvpStatus,
     alreadyStamped: attendee.stamps.includes(session.id),
     status: sessionCheckInStatus(session, now),
-    codeCheck: verifyRoomCode(env.SESSION_SECRET, session.id, submittedCode, now),
+    codeCheck: verifyRoomCode(env.SESSION_SECRET, session.id, submittedCode, now, eventNowAgo(CODE_PERIOD_MS)),
   });
   if (denial) throw denial;
 
