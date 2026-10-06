@@ -14,7 +14,7 @@ export function DayButton({ day, onPage, onSelect }: { day: number; onPage: bool
       onClick={onSelect}
       data-day={day}
       aria-current={onPage ? 'true' : undefined}
-      className={`inline-flex min-h-10 items-center rounded-[10px] border px-3.5 text-sm font-medium transition-colors ${
+      className={`inline-flex min-h-11 items-center rounded-[10px] border px-3.5 lg:min-h-10 text-sm font-medium transition-colors ${
         onPage ? 'border-ink bg-ink text-white hover:bg-ink-active' : 'border-field bg-white text-ink hover:bg-wash'
       }`}
     >

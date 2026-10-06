@@ -45,7 +45,7 @@ import { DayJumpBar, PageRail } from '@/components/DayPager';
 import { DroppableDayChip } from '@/components/planner/ItineraryPager';
 import Skeleton from '@/components/Skeleton';
 import { useDayPaging } from '@/hooks/useDayPaging';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/useMediaQuery';
 import { useMoveFocus } from '@/hooks/useMoveFocus';
 import { useUiStore } from '@/store/uiStore';
 import type { ScheduleItem } from '@/types';
@@ -75,7 +75,7 @@ const stepAside =
 const keyboardCodes = { start: ['Space', 'Enter'], cancel: ['Escape'], end: ['Space', 'Enter'] };
 
 const cardActionClass =
-  'flex size-8 items-center justify-center rounded-lg bg-canvas text-ink transition-colors hover:bg-line disabled:pointer-events-none disabled:opacity-35';
+  'flex size-11 items-center justify-center rounded-lg bg-canvas text-ink lg:size-8 transition-colors hover:bg-line disabled:pointer-events-none disabled:opacity-35';
 
 /**
  * Mouse and touch drops follow the pointer: whichever card (or empty column space) it is over wins.
@@ -180,7 +180,7 @@ function ScheduleCard({
             ref={setActivatorNodeRef}
             aria-label={`Drag ${item.title} to reorder or move`}
             data-testid="drag-handle"
-            className="-ml-1 flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted transition-colors hover:bg-canvas hover:text-ink active:cursor-grabbing"
+            className="relative -ml-1 flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md before:absolute before:-inset-2.5 before:content-[''] lg:before:hidden text-muted transition-colors hover:bg-canvas hover:text-ink active:cursor-grabbing"
             {...listeners}
             {...attributes}
           >
@@ -197,7 +197,7 @@ function ScheduleCard({
                 const day = Number(event.target.value);
                 if (day) onMoveToDay(item, day);
               }}
-              className="h-8 w-full cursor-pointer rounded-lg bg-canvas px-2 text-xs font-medium text-ink transition-colors hover:bg-line"
+              className="h-11 w-full cursor-pointer rounded-lg bg-canvas px-2 text-xs font-medium lg:h-8 text-ink transition-colors hover:bg-line"
             >
               <option value="">Move to another day…</option>
               {dayChoices.map((day) => (
@@ -214,7 +214,7 @@ function ScheduleCard({
               to={`/planner/sessions/${item.id}/code`}
               aria-label={`Show check-in code for ${item.title}`}
               title="Show check-in code"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-ink px-2.5 text-xs font-semibold text-lime no-underline transition-colors hover:bg-ink-active hover:text-lime"
+              className="inline-flex h-11 items-center gap-1.5 rounded-lg bg-ink px-3 text-xs font-semibold lg:h-8 lg:px-2.5 text-lime no-underline transition-colors hover:bg-ink-active hover:text-lime"
             >
               <QrCode className="size-3.5" strokeWidth={2} aria-hidden="true" />
               Code
@@ -383,7 +383,10 @@ export default function CalendarBoard() {
 
   const items = draft ?? saved.data ?? [];
   const days = eventDayNumbers(items);
-  const paging = useDayPaging(days);
+  const wide = useMediaQuery(DESKTOP_QUERY);
+  const medium = useMediaQuery('(min-width: 40rem)');
+  const perPage = wide ? 3 : medium ? 2 : 1;
+  const paging = useDayPaging(days, { perPage });
   const rememberMove = useMoveFocus(items);
 
   // Opening or closing an AI draft starts the board back on its first page.
@@ -632,7 +635,7 @@ export default function CalendarBoard() {
         )}
 
         <div className="flex items-stretch gap-3">
-          {paged && neighbours.previous && (
+          {paged && perPage > 1 && neighbours.previous && (
             <PageRail
               direction="previous"
               label={neighbours.previous}
@@ -663,7 +666,7 @@ export default function CalendarBoard() {
               />
             ))}
           </div>
-          {paged && neighbours.next && (
+          {paged && perPage > 1 && neighbours.next && (
             <PageRail
               direction="next"
               label={neighbours.next}

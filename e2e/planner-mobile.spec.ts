@@ -226,3 +226,175 @@ test.describe('the AI bar and page padding on a wide screen', () => {
     expect(await page.getByLabel('Describe the offsite you want to plan').getAttribute('placeholder')).toContain('3-day team retreat');
   });
 });
+
+// ---- the itinerary board: one day at a time on a phone, two on a tablet, three on a wide screen ----
+
+function draftFor(days: number) {
+  const slots = [
+    ['a', '09:00', '10:00', 'keynote'],
+    ['b', '12:00', '13:00', 'meal'],
+    ['c', '14:00', '16:00', 'activity'],
+  ] as const;
+  return {
+    items: Array.from({ length: days }, (_, index) => index + 1).flatMap((day) =>
+      slots.map(([key, startTime, endTime, category]) => ({
+        id: `pm-${day}-${key}`,
+        day,
+        startTime,
+        endTime,
+        title: `E2E Day ${day} ${category}`,
+        description: 'Mocked',
+        location: 'Main Hall',
+        category,
+        costEstimate: 500,
+      })),
+    ),
+  };
+}
+
+async function openDraft(page: Page, days: number) {
+  await page.context().addCookies([sessionCookie(plannerSession)]);
+  await page.route('**/api/ai/generate-schedule', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(draftFor(days)) }),
+  );
+  await page.goto('/planner');
+  await page.getByLabel('Describe the offsite you want to plan').fill(`${days}-day retreat in Lisbon`);
+  await page.getByRole('button', { name: 'Generate draft' }).click();
+  await expect(page.getByRole('navigation', { name: 'Jump to day' })).toBeVisible();
+  await page.locator('#itinerary').evaluate((section) => section.scrollIntoView());
+}
+
+const dayColumns = (page: Page) => page.getByRole('group', { name: /^Day \d$/ });
+const dayColumn = (page: Page, day: number) => page.getByRole('group', { name: `Day ${day}`, exact: true });
+const rangeText = (page: Page, text: string) => page.locator('#itinerary').getByText(text, { exact: true });
+const sideStrips = (page: Page) => page.getByRole('button', { name: /^Show (next|previous) days, / });
+
+/** Drags with a finger: touch down, move in small steps, lift. Playwright has no touch drag of its own. */
+async function touchDrag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
+  const client = await page.context().newCDPSession(page);
+  const send = (type: 'touchStart' | 'touchMove' | 'touchEnd', point?: { x: number; y: number }) =>
+    client.send('Input.dispatchTouchEvent', { type, touchPoints: point ? [{ x: point.x, y: point.y }] : [] });
+  await send('touchStart', from);
+  const steps = 14;
+  for (let step = 1; step <= steps; step += 1) {
+    await send('touchMove', { x: from.x + ((to.x - from.x) * step) / steps, y: from.y + ((to.y - from.y) * step) / steps });
+    await page.waitForTimeout(16);
+  }
+  await page.waitForTimeout(250);
+  await send('touchEnd');
+}
+
+const centre = async (locator: ReturnType<Page['locator']>) => {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error('Nothing to point at');
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+};
+
+test.describe('the itinerary board on a phone', () => {
+  test.use({ viewport: PHONE, hasTouch: true, isMobile: true });
+
+  test('shows one day at a time, with Day buttons and no side strips', async ({ page }) => {
+    await openDraft(page, 5);
+    await expect(dayColumns(page)).toHaveCount(1);
+    await expect(dayColumn(page, 1)).toBeVisible();
+    await expect(rangeText(page, 'Day 1 of 5')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Jump to day' }).getByRole('button')).toHaveCount(5);
+    await expect(sideStrips(page)).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Show next days', exact: true }).click();
+    await expect(rangeText(page, 'Day 2 of 5')).toBeVisible();
+    await expect(dayColumn(page, 2)).toBeVisible();
+    await expect(dayColumns(page)).toHaveCount(1);
+
+    await page.getByRole('navigation', { name: 'Jump to day' }).getByRole('button', { name: 'Day 5', exact: true }).click();
+    await expect(dayColumn(page, 5)).toBeVisible();
+  });
+
+  test('also shows the saved three-day itinerary one day at a time', async ({ page }) => {
+    await open(page);
+    await expect(page.getByTestId('schedule-card').first()).toBeVisible();
+    await expect(dayColumns(page)).toHaveCount(1);
+    await expect(rangeText(page, 'Day 1 of 3')).toBeVisible();
+  });
+
+  test('gives each card full width and touch-sized controls', async ({ page }) => {
+    await openDraft(page, 5);
+    const card = await page.getByTestId('schedule-card').first().boundingBox();
+    expect(card?.width ?? 0).toBeGreaterThan(300);
+
+    const small = await page.locator('#itinerary').evaluate((board) => {
+      const found: string[] = [];
+      const selector =
+        '[data-testid="schedule-card"] button:not([data-testid="drag-handle"]), [data-testid="schedule-card"] select, [data-testid="schedule-card"] a, nav button';
+      for (const control of board.querySelectorAll(selector)) {
+        const rect = control.getBoundingClientRect();
+        if (rect.width > 0 && (rect.width < 43.5 || rect.height < 43.5)) {
+          found.push(`${control.getAttribute('aria-label') ?? control.textContent?.trim()} ${Math.round(rect.width)}x${Math.round(rect.height)}`);
+        }
+      }
+      return found;
+    });
+    expect(small).toEqual([]);
+  });
+
+  test('fits the screen, with no text over other text', async ({ page }) => {
+    await openDraft(page, 5);
+    expect(await fitsAcross(page)).toBe(true);
+    expect(await overlappingText(page, '#itinerary')).toEqual([]);
+  });
+
+  test('reorders a day when a card is dragged with a finger', async ({ page }) => {
+    await openDraft(page, 3);
+    const titles = () => dayColumn(page, 1).getByTestId('schedule-card').locator('h3').allTextContents();
+    expect(await titles()).toEqual(['E2E Day 1 keynote', 'E2E Day 1 meal', 'E2E Day 1 activity']);
+
+    // Drag the second card up over the first, so the finger stays in the middle of the screen.
+    const from = await centre(page.getByRole('button', { name: 'Drag E2E Day 1 meal to reorder or move' }));
+    const over = await centre(dayColumn(page, 1).getByTestId('schedule-card').first());
+    await touchDrag(page, from, { x: from.x, y: over.y - 20 });
+
+    await expect(page.getByTestId('toast').filter({ hasText: 'Day 1 reordered' })).toBeVisible();
+    expect(await titles()).toEqual(['E2E Day 1 meal', 'E2E Day 1 keynote', 'E2E Day 1 activity']);
+  });
+
+  test('moves a card to another day when it is dragged onto a Day button with a finger', async ({ page }) => {
+    await openDraft(page, 3);
+    const from = await centre(page.getByRole('button', { name: 'Drag E2E Day 1 meal to reorder or move' }));
+    const to = await centre(page.getByRole('navigation', { name: 'Jump to day' }).getByRole('button', { name: 'Day 3', exact: true }));
+    await touchDrag(page, from, to);
+
+    await expect(page.getByTestId('toast').filter({ hasText: 'Moved E2E Day 1 meal to Day 3' })).toBeVisible();
+    // The board stays on Day 1, which now has one card fewer.
+    await expect(dayColumn(page, 1).getByTestId('schedule-card')).toHaveCount(2);
+  });
+});
+
+test.describe('the itinerary board on a tablet', () => {
+  test.use({ viewport: TABLET, hasTouch: true, isMobile: true });
+
+  test('shows two days at a time, with side strips', async ({ page }) => {
+    await openDraft(page, 5);
+    await expect(dayColumns(page)).toHaveCount(2);
+    await expect(rangeText(page, 'Days 1–2 of 5')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Show next days, Days 3–4' })).toBeVisible();
+    expect(await fitsAcross(page)).toBe(true);
+    expect(await overlappingText(page, '#itinerary')).toEqual([]);
+  });
+});
+
+test.describe('the itinerary board when the screen changes size', () => {
+  test.use({ viewport: DESKTOP });
+
+  test('keeps you on the day you were looking at', async ({ page }) => {
+    await openDraft(page, 5);
+    await page.getByRole('button', { name: 'Show next days', exact: true }).click();
+    await expect(rangeText(page, 'Days 4–5 of 5')).toBeVisible();
+
+    await page.setViewportSize(PHONE);
+    await expect(rangeText(page, 'Day 4 of 5')).toBeVisible();
+    await expect(dayColumns(page)).toHaveCount(1);
+
+    await page.setViewportSize(DESKTOP);
+    await expect(rangeText(page, 'Days 4–5 of 5')).toBeVisible();
+  });
+});
