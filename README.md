@@ -296,7 +296,7 @@ The server can host the built app itself, so one small Node service is enough. T
 3. **Set these environment variables on the host** (never commit them): `NODE_ENV=production`, `SESSION_SECRET` (a random string of at least 32 characters), `SERVE_CLIENT=true` and `TRUST_PROXY_HOPS=1`. Use Node 22.
 4. **Optional:** `ANTHROPIC_API_KEY` turns the AI bar on (give it a key with a spend limit, because every visitor can use it), and `DEMO_LIVE_LOOP=true` keeps a session live so check-in can always be tried.
 5. **Health check:** `/api/health`.
-6. **Setting `TRUST_PROXY_HOPS`:** hosts put different numbers of proxies in front of the server, and the right value is the number that makes the server see the visitor's own address. Turn on `LOG_CLIENT_ADDRESS=true` while you work it out, and turn it off again afterwards. Each request log line then shows the address the server picked (`ip`), the raw `X-Forwarded-For` chain (`forwardedFor`) and Cloudflare's `CF-Connecting-IP` when a host sends it. Send a request with a made-up `X-Forwarded-For` and read the log: `ip` should be your own address, and the made-up one should appear only in `forwardedFor`.
+6. **Setting `TRUST_PROXY_HOPS`:** it should equal the number of proxies in front of the server. If rate limits seem to count visitors together, turn on `LOG_CLIENT_ADDRESS` briefly and read the `ip` and `forwardedFor` fields in the request log, then turn it off again.
 
 In production the session cookie is `Secure`, so the site must be served over HTTPS. Anyone who can open the site can sign in as the planner, because sign-in is a demo, so treat a public deployment as a sandbox.
 
