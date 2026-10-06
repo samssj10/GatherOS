@@ -1,33 +1,43 @@
-/** How many day columns the itinerary board shows at once. */
+/** How many day columns a wide screen shows at once. A phone shows one (see the `perPage` arguments). */
 export const DAYS_PER_PAGE = 3;
 
 /** The board only pages once the trip is longer than one page. */
-export function isPaged(dayCount: number): boolean {
-  return dayCount > DAYS_PER_PAGE;
+export function isPaged(dayCount: number, perPage = DAYS_PER_PAGE): boolean {
+  return dayCount > perPage;
 }
 
-export function pageCount(dayCount: number): number {
-  return Math.max(1, Math.ceil(dayCount / DAYS_PER_PAGE));
+export function pageCount(dayCount: number, perPage = DAYS_PER_PAGE): number {
+  return Math.max(1, Math.ceil(dayCount / perPage));
 }
 
 /** Keeps a page number inside the trip, e.g. after a draft with fewer days replaces a longer one. */
-export function clampPage(page: number, dayCount: number): number {
-  return Math.max(0, Math.min(page, pageCount(dayCount) - 1));
+export function clampPage(page: number, dayCount: number, perPage = DAYS_PER_PAGE): number {
+  return Math.max(0, Math.min(page, pageCount(dayCount, perPage) - 1));
+}
+
+/** The position (in the list of days) of the first day on a page. */
+export function firstIndexOfPage(page: number, perPage = DAYS_PER_PAGE): number {
+  return Math.max(0, page) * perPage;
+}
+
+/** The page (zero-based) that holds the day at a position in the list of days. */
+export function pageOfIndex(index: number, perPage = DAYS_PER_PAGE): number {
+  return Math.max(0, Math.floor(index / perPage));
 }
 
 /**
  * The page (zero-based) a day sits on, by its position in the list of days. Not by its number:
  * an attendee's list can skip a day nobody planned (1, 2, 4), and Day 4 is then third, on page 0.
  */
-export function pageOfDay(days: readonly number[], day: number): number {
+export function pageOfDay(days: readonly number[], day: number, perPage = DAYS_PER_PAGE): number {
   const position = days.indexOf(day);
-  return position < 0 ? 0 : Math.floor(position / DAYS_PER_PAGE);
+  return position < 0 ? 0 : pageOfIndex(position, perPage);
 }
 
 /** The days shown on one page, out of every day of the trip. */
-export function daysOnPage(days: readonly number[], page: number): number[] {
-  const start = clampPage(page, days.length) * DAYS_PER_PAGE;
-  return days.slice(start, start + DAYS_PER_PAGE);
+export function daysOnPage(days: readonly number[], page: number, perPage = DAYS_PER_PAGE): number[] {
+  const start = firstIndexOfPage(clampPage(page, days.length, perPage), perPage);
+  return days.slice(start, start + perPage);
 }
 
 /**
@@ -44,8 +54,8 @@ export function daysLabel(shown: readonly number[]): string {
 }
 
 /** The toolbar label: "Days 1–3 of 4". */
-export function rangeLabel(days: readonly number[], page: number): string {
-  const shown = daysOnPage(days, page);
+export function rangeLabel(days: readonly number[], page: number, perPage = DAYS_PER_PAGE): string {
+  const shown = daysOnPage(days, page, perPage);
   return shown.length === 0 ? '' : `${daysLabel(shown)} of ${days.length}`;
 }
 
@@ -56,11 +66,11 @@ export interface NeighbourPages {
   next: string | null;
 }
 
-export function neighbourPages(days: readonly number[], page: number): NeighbourPages {
-  const current = clampPage(page, days.length);
-  const last = pageCount(days.length) - 1;
+export function neighbourPages(days: readonly number[], page: number, perPage = DAYS_PER_PAGE): NeighbourPages {
+  const current = clampPage(page, days.length, perPage);
+  const last = pageCount(days.length, perPage) - 1;
   return {
-    previous: current > 0 ? daysLabel(daysOnPage(days, current - 1)) : null,
-    next: current < last ? daysLabel(daysOnPage(days, current + 1)) : null,
+    previous: current > 0 ? daysLabel(daysOnPage(days, current - 1, perPage)) : null,
+    next: current < last ? daysLabel(daysOnPage(days, current + 1, perPage)) : null,
   };
 }

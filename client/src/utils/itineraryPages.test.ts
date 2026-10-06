@@ -3,10 +3,12 @@ import {
   clampPage,
   daysLabel,
   daysOnPage,
+  firstIndexOfPage,
   isPaged,
   neighbourPages,
   pageCount,
   pageOfDay,
+  pageOfIndex,
   rangeLabel,
 } from './itineraryPages';
 
@@ -93,6 +95,43 @@ describe('labels', () => {
     expect(rangeLabel(days(4), 1)).toBe('Day 4 of 4');
     expect(rangeLabel(days(7), 1)).toBe('Days 4–6 of 7');
     expect(rangeLabel([], 0)).toBe('');
+  });
+});
+
+describe('a page size other than three (a phone shows one day)', () => {
+  it('pages one day at a time', () => {
+    expect(isPaged(3, 1)).toBe(true);
+    expect(isPaged(1, 1)).toBe(false);
+    expect(pageCount(5, 1)).toBe(5);
+    expect(daysOnPage(days(5), 2, 1)).toEqual([3]);
+    expect(daysOnPage(days(5), 9, 1)).toEqual([5]);
+    expect(pageOfDay(days(5), 4, 1)).toBe(3);
+  });
+
+  it('labels a single-day page and its neighbours', () => {
+    expect(rangeLabel(days(5), 1, 1)).toBe('Day 2 of 5');
+    expect(neighbourPages(days(5), 0, 1)).toEqual({ previous: null, next: 'Day 2' });
+    expect(neighbourPages(days(5), 4, 1)).toEqual({ previous: 'Day 4', next: null });
+  });
+
+  it('clamps with the page size in mind', () => {
+    expect(clampPage(7, 5, 1)).toBe(4);
+    expect(clampPage(7, 5, 3)).toBe(1);
+  });
+
+  it('knows where a page starts and which page holds a position', () => {
+    expect(firstIndexOfPage(2, 3)).toBe(6);
+    expect(firstIndexOfPage(2, 1)).toBe(2);
+    expect(firstIndexOfPage(-1, 3)).toBe(0);
+    expect(pageOfIndex(7, 3)).toBe(2);
+    expect(pageOfIndex(7, 1)).toBe(7);
+  });
+
+  it('keeps you on the day you were looking at when the page size changes', () => {
+    // On a wide screen the second page starts at the fourth day (position 3).
+    const anchor = firstIndexOfPage(1, 3);
+    // Turn to a phone, one day per page: that same first day is what is shown.
+    expect(daysOnPage(days(7), pageOfIndex(anchor, 1), 1)).toEqual([4]);
   });
 });
 

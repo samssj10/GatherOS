@@ -610,6 +610,7 @@ export default function CalendarBoard() {
           <DayJumpBar
             days={days}
             page={paging.page}
+            perPage={paging.perPage}
             renderDay={(day, onPage) => (
               <DroppableDayChip
                 day={day}
