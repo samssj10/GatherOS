@@ -3,6 +3,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import BudgetCard from '@/components/planner/BudgetCard';
 import CalendarBoard from '@/components/planner/CalendarBoard';
 import DraftBanner from '@/components/planner/DraftBanner';
+import HostRankCard from '@/components/planner/HostRankCard';
 import MilestonesCard from '@/components/planner/MilestonesCard';
 import ReadinessCard from '@/components/planner/ReadinessCard';
 import RsvpOverview from '@/components/planner/RsvpOverview';
@@ -34,6 +35,11 @@ export default function PlannerDashboard() {
           </div>
           <p className="text-[15px] text-body">Budget, responses and the itinerary at a glance.</p>
         </header>
+
+        {/* The sidebar holds this card on a wide screen; on a phone it sits here instead. */}
+        <div className="lg:hidden">
+          <HostRankCard />
+        </div>
 
         <DraftBanner />
 
