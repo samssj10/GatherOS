@@ -201,6 +201,9 @@ Any seeded attendee works. Emails follow the pattern `first.last.NNNN@example.co
 | `STAMP_RATE_LIMIT_MAX` | no | `10` | Check-in attempts per attendee per window (limits guessing the room code) |
 | `EVENT_START_DATE` | no | today | Day 1 of the offsite as `YYYY-MM-DD`. Check-in opens and closes by the server clock |
 | `EVENT_NOW` | no | | Pins "now" for demos and tests, e.g. `2030-06-03T09:30:00` with `EVENT_START_DATE=2030-06-03` makes the opening keynote live |
+| `DEMO_LIVE_LOOP` | no | `false` | Showcase mode: the event clock loops through the first session of Day 1, so one session is always live and check-in can always be tried. The room code still changes every real minute. `EVENT_NOW` takes priority |
+| `SERVE_CLIENT` | no | `false` | The server also serves the built React app from `client/dist` (one process, one origin) |
+| `TRUST_PROXY_HOPS` | no | `0` | How many proxies sit in front of the server (`1` behind a typical host), so rate limits count real visitors |
 | `ANTHROPIC_API_KEY` | no | | Enables AI generation |
 | `ANTHROPIC_MODEL` | no | `claude-haiku-4-5` | Model used for itineraries |
 | `ANTHROPIC_BASE_URL` | no | | Override the API endpoint (proxies, test doubles) |
@@ -258,7 +261,7 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 
 ## Testing and CI
 
-**Unit tests (Vitest, 175 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
+**Unit tests (Vitest, 202 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
 
 **End-to-end (Playwright).** Five specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
 
@@ -282,6 +285,18 @@ npm run test:e2e
 ```
 
 GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)) runs on every push and pull request with two jobs: **Typecheck and lint** (`tsc --noEmit`, ESLint and the unit tests) and **Playwright** (the journey above, with the HTML report uploaded as an artifact).
+
+## Deploying
+
+The server can host the built app itself, so one small Node service is enough. The data is in memory, so it resets whenever the process restarts, and every visitor shares one sandbox. A host that keeps a process running fits; serverless functions do not, because each function keeps its own memory.
+
+1. **Build:** `npm install --prefix client && npm install --prefix server && npm run build --prefix client && npm run build --prefix server`
+2. **Start:** `npm run start --prefix server` (it listens on `PORT`).
+3. **Set these environment variables on the host** (never commit them): `NODE_ENV=production`, `SESSION_SECRET` (a random string of at least 32 characters), `SERVE_CLIENT=true` and `TRUST_PROXY_HOPS=1`. Use Node 22.
+4. **Optional:** `ANTHROPIC_API_KEY` turns the AI bar on (give it a key with a spend limit, because every visitor can use it), and `DEMO_LIVE_LOOP=true` keeps a session live so check-in can always be tried.
+5. **Health check:** `/api/health`.
+
+In production the session cookie is `Secure`, so the site must be served over HTTPS. Anyone who can open the site can sign in as the planner, because sign-in is a demo, so treat a public deployment as a sandbox.
 
 ## Project structure
 
@@ -313,6 +328,7 @@ GatherOS/
 
 ## Known limitations
 
+- **The demo clock repeats.** With `DEMO_LIVE_LOOP`, the room code for a given minute of the loop is the same every loop, so it proves nothing about being in the room. That is the point for a showcase and not for a real event.
 - **No persistent database.** Data lives in server memory and resets on every restart: the 2,500 attendees, the itinerary, stamps and nudges.
 - **Mock authentication.** Sign-in is passwordless and exists for demonstration. Replace it with a real identity provider before any real use.
 - **Nudges send nothing.** The server records who was nudged and the roster shows it, but no email or message goes out.
