@@ -23,13 +23,13 @@ export default function PlannerDashboard() {
         <AiCommandBar />
       </ErrorBoundary>
 
-      <div className="flex w-full max-w-310 flex-col gap-6 p-8">
+      <div className="flex w-full max-w-310 flex-col gap-5 p-4 sm:gap-6 sm:p-6 lg:p-8">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted">
               Company offsite · {dayCount} days{sessionCount !== undefined ? ` · ${sessionCount} sessions` : ''}
             </p>
-            <h1 className="mt-1.5 font-display text-[40px] leading-tight font-extrabold tracking-[-0.02em]">
+            <h1 className="mt-1.5 font-display text-[32px] leading-tight font-extrabold tracking-[-0.02em] sm:text-[40px]">
               Mission control
             </h1>
           </div>

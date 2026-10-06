@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { useAttendeeSummary } from '@/api/attendees';
 import { useBudgetSummary, useGenerateSchedule } from '@/api/schedule';
 import BurstIcon from '@/components/layout/BurstIcon';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MAX_EVENT_DAYS, describeResolvedDays, resolveDays } from '@/utils/eventLength';
 
 const fieldClass =
@@ -15,6 +16,7 @@ export default function AiCommandBar() {
   const summary = useAttendeeSummary().data;
   const budget = useBudgetSummary().data?.budget;
 
+  const wideEnough = useMediaQuery('(min-width: 40rem)');
   const [prompt, setPrompt] = useState('');
   const [showOptions, setShowOptions] = useState(false);
   const [city, setCity] = useState('');
@@ -40,8 +42,9 @@ export default function AiCommandBar() {
     });
   };
 
+  // The bar sticks to the top only on a wide screen: on a phone it would cover a quarter of the page.
   return (
-    <header className="sticky top-0 z-10 border-b border-line bg-white px-8">
+    <header className="border-b border-line bg-white px-4 sm:px-6 lg:sticky lg:top-0 lg:z-10 lg:px-8">
       <form
         role="search"
         aria-label="Generate itinerary with AI"
@@ -63,7 +66,7 @@ export default function AiCommandBar() {
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               disabled={pending}
-              placeholder="Describe your offsite, e.g. 3-day team retreat in Lisbon with a sailing day"
+              placeholder={wideEnough ? 'Describe your offsite, e.g. 3-day team retreat in Lisbon with a sailing day' : 'Describe your offsite, e.g. 3 days in Lisbon'}
               aria-describedby="ai-days-hint"
               className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-muted disabled:opacity-60"
             />
@@ -81,7 +84,7 @@ export default function AiCommandBar() {
           <button
             type="submit"
             disabled={pending}
-            className="flex min-h-12 shrink-0 items-center gap-2 rounded-[14px] bg-brand px-5.5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-70"
+            className="flex min-h-12 flex-1 shrink-0 items-center justify-center gap-2 rounded-[14px] bg-brand px-5.5 sm:flex-none text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-70"
           >
             {pending ? (
               <Loader2 className="size-4.5 animate-spin" strokeWidth={1.8} aria-hidden="true" />
@@ -99,7 +102,7 @@ export default function AiCommandBar() {
         )}
 
         {showOptions && (
-          <div id="ai-options" className="grid grid-cols-3 gap-4 pb-4">
+          <div id="ai-options" className="grid grid-cols-1 gap-3 pb-4 sm:grid-cols-3 sm:gap-4">
             <div>
               <label htmlFor="ai-city" className="text-xs font-medium text-muted">
                 City (optional)

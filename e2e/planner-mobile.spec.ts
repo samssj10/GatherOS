@@ -116,3 +116,113 @@ test.describe('the planner on a wide screen', () => {
     await expect(page.getByRole('complementary').getByRole('region', { name: 'Host rank' })).toBeVisible();
   });
 });
+
+/**
+ * Pairs of visible text pieces that are drawn on top of each other inside `scope`. It measures the text
+ * as drawn (a number wider than its cell spills out of the cell's box, which a box check would miss).
+ */
+async function overlappingText(page: Page, scope: string): Promise<string[]> {
+  return page.locator(scope).first().evaluate((root) => {
+    const drawn = (element: Element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return range.getBoundingClientRect();
+    };
+    const leaves = Array.from(root.querySelectorAll('*')).filter((element) => {
+      const rect = drawn(element);
+      return (
+        element.childElementCount === 0 &&
+        (element.textContent ?? '').trim() !== '' &&
+        rect.width > 2 &&
+        rect.height > 2 &&
+        getComputedStyle(element).visibility !== 'hidden' &&
+        !element.closest('[aria-hidden="true"]') &&
+        !element.closest('.sr-only')
+      );
+    });
+    const clashes: string[] = [];
+    for (let i = 0; i < leaves.length; i += 1) {
+      for (let j = i + 1; j < leaves.length; j += 1) {
+        const first = drawn(leaves[i]);
+        const second = drawn(leaves[j]);
+        const overlaps =
+          first.left < second.right - 1 && second.left < first.right - 1 && first.top < second.bottom - 1 && second.top < first.bottom - 1;
+        if (overlaps) clashes.push(`"${leaves[i].textContent?.trim()}" over "${leaves[j].textContent?.trim()}"`);
+      }
+    }
+    return clashes.slice(0, 5);
+  });
+}
+
+const budgetNumbers = (page: Page) => page.getByRole('region', { name: 'Budget' }).locator('dd');
+
+for (const [name, size, columns] of [['phone', PHONE, 1], ['tablet', TABLET, 3], ['wide screen', DESKTOP, 3]] as const) {
+  test.describe(`the dashboard on a ${name}`, () => {
+    test.use({ viewport: size, hasTouch: size.width < 1024, isMobile: size.width < 1024 });
+
+    test('has no text drawn over other text', async ({ page }) => {
+      await open(page);
+      await expect(page.getByRole('region', { name: 'Budget' })).toBeVisible();
+      expect(await overlappingText(page, 'main')).toEqual([]);
+    });
+
+    test(`lays the three budget figures out in ${columns === 1 ? 'a column' : 'a row'}`, async ({ page }) => {
+      await open(page);
+      const budget = page.getByRole('region', { name: 'Budget' });
+      const gridColumns = await budget.locator('dl').evaluate((dl) => getComputedStyle(dl).gridTemplateColumns.split(' ').length);
+      expect(gridColumns).toBe(columns);
+      // Every figure sits inside the screen.
+      const rights = await budgetNumbers(page).evaluateAll((all) => all.map((dd) => dd.getBoundingClientRect().right));
+      expect(rights).toHaveLength(3);
+      for (const right of rights) expect(right).toBeLessThanOrEqual(size.width);
+    });
+  });
+}
+
+test.describe('the AI bar and page padding on a phone', () => {
+  test.use({ viewport: PHONE, hasTouch: true, isMobile: true });
+
+  test('scrolls away with the page instead of covering it', async ({ page }) => {
+    await open(page);
+    const position = await page.locator('header').filter({ has: page.getByRole('search') }).evaluate((el) => getComputedStyle(el).position);
+    expect(position).not.toBe('sticky');
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const top = await page.locator('header').filter({ has: page.getByRole('search') }).evaluate((el) => el.getBoundingClientRect().bottom);
+    expect(top).toBeLessThan(0);
+  });
+
+  test('stacks its options one to a row, each as wide as the screen allows', async ({ page }) => {
+    await open(page);
+    await page.getByRole('button', { name: 'Generation options' }).click();
+    const widths = await page.locator('#ai-options input, #ai-options select').evaluateAll((all) => all.map((el) => Math.round(el.getBoundingClientRect().width)));
+    expect(widths).toHaveLength(3);
+    for (const width of widths) expect(width).toBeGreaterThan(300);
+    expect(new Set(widths).size).toBe(1);
+  });
+
+  test('uses a short prompt hint that fits, and a Generate button that fills the row', async ({ page }) => {
+    await open(page);
+    const placeholder = await page.getByLabel('Describe the offsite you want to plan').getAttribute('placeholder');
+    expect(placeholder).toBe('Describe your offsite, e.g. 3 days in Lisbon');
+    const generate = await page.getByRole('button', { name: 'Generate draft' }).boundingBox();
+    expect(generate?.width ?? 0).toBeGreaterThan(200);
+  });
+
+  test('keeps a 16px margin at the sides of the page', async ({ page }) => {
+    await open(page);
+    const left = await page.getByRole('region', { name: 'Budget' }).evaluate((el) => el.getBoundingClientRect().left);
+    expect(left).toBe(16);
+  });
+});
+
+test.describe('the AI bar and page padding on a wide screen', () => {
+  test.use({ viewport: DESKTOP });
+
+  test('still sticks to the top and keeps its 32px margin', async ({ page }) => {
+    await open(page);
+    const header = page.locator('header').filter({ has: page.getByRole('search') });
+    expect(await header.evaluate((el) => getComputedStyle(el).position)).toBe('sticky');
+    expect(await page.getByRole('region', { name: 'Budget' }).evaluate((el) => el.getBoundingClientRect().left)).toBe(276 + 32);
+    expect(await page.getByLabel('Describe the offsite you want to plan').getAttribute('placeholder')).toContain('3-day team retreat');
+  });
+});
