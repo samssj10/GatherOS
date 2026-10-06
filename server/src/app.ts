@@ -6,7 +6,7 @@ import type { Express } from 'express';
 import helmet from 'helmet';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { apiLimiter } from './middlewares/rateLimiter';
-import { requestLogger } from './middlewares/requestLogger';
+import { createRequestLogger } from './middlewares/requestLogger';
 import { apiRouter } from './routes';
 
 export interface AppOptions {
@@ -17,13 +17,15 @@ export interface AppOptions {
   clientDir?: string | null;
   /** How many proxies sit in front of the server (a host's load balancer counts as one). 0 trusts none. */
   trustProxyHops?: number;
+  /** Log each visitor's address and forwarding headers (personal data); for working out trustProxyHops. */
+  logClientAddress?: boolean;
 }
 
 // Any GET that is not under /api and has no file extension is a page of the single-page app.
 const APP_PAGE = /^\/(?!api(?:\/|$))[^.]*$/;
 
 /** Builds the Express app without starting it, so tests can run it on any free port. */
-export function createApp({ clientDir = null, trustProxyHops = 0 }: AppOptions = {}): Express {
+export function createApp({ clientDir = null, trustProxyHops = 0, logClientAddress = false }: AppOptions = {}): Express {
   const app = express();
 
   // Behind a host's proxy every request arrives from the proxy's address; without this the rate limits
@@ -33,7 +35,7 @@ export function createApp({ clientDir = null, trustProxyHops = 0 }: AppOptions =
   app.use(helmet());
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
-  app.use(requestLogger);
+  app.use(createRequestLogger({ logClientAddress }));
   app.use('/api', apiLimiter, apiRouter);
 
   const indexFile = clientDir ? path.join(clientDir, 'index.html') : null;

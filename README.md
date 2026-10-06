@@ -204,6 +204,7 @@ Any seeded attendee works. Emails follow the pattern `first.last.NNNN@example.co
 | `DEMO_LIVE_LOOP` | no | `false` | Showcase mode: the event clock loops through the first session of Day 1, so one session is always live and check-in can always be tried. The room code still changes every real minute. `EVENT_NOW` takes priority |
 | `SERVE_CLIENT` | no | `false` | The server also serves the built React app from `client/dist` (one process, one origin) |
 | `TRUST_PROXY_HOPS` | no | `0` | How many proxies sit in front of the server (`1` behind a typical host), so rate limits count real visitors |
+| `LOG_CLIENT_ADDRESS` | no | `false` | Adds each visitor's address and forwarding headers to the request log, to work out `TRUST_PROXY_HOPS` on a host. These are personal data, so turn it off again afterwards |
 | `ANTHROPIC_API_KEY` | no | | Enables AI generation |
 | `ANTHROPIC_MODEL` | no | `claude-haiku-4-5` | Model used for itineraries |
 | `ANTHROPIC_BASE_URL` | no | | Override the API endpoint (proxies, test doubles) |
@@ -295,7 +296,7 @@ The server can host the built app itself, so one small Node service is enough. T
 3. **Set these environment variables on the host** (never commit them): `NODE_ENV=production`, `SESSION_SECRET` (a random string of at least 32 characters), `SERVE_CLIENT=true` and `TRUST_PROXY_HOPS=1`. Use Node 22.
 4. **Optional:** `ANTHROPIC_API_KEY` turns the AI bar on (give it a key with a spend limit, because every visitor can use it), and `DEMO_LIVE_LOOP=true` keeps a session live so check-in can always be tried.
 5. **Health check:** `/api/health`.
-6. **Setting `TRUST_PROXY_HOPS`:** hosts put different numbers of proxies in front of the server, and the right value is the number that makes the server see the visitor's own address. Each request log line shows the address the server picked (`ip`), the raw `X-Forwarded-For` chain (`forwardedFor`) and Cloudflare's `CF-Connecting-IP` when a host sends it. Send a request with a made-up `X-Forwarded-For` and read the log: `ip` should be your own address, and the made-up one should appear only in `forwardedFor`.
+6. **Setting `TRUST_PROXY_HOPS`:** hosts put different numbers of proxies in front of the server, and the right value is the number that makes the server see the visitor's own address. Turn on `LOG_CLIENT_ADDRESS=true` while you work it out, and turn it off again afterwards. Each request log line then shows the address the server picked (`ip`), the raw `X-Forwarded-For` chain (`forwardedFor`) and Cloudflare's `CF-Connecting-IP` when a host sends it. Send a request with a made-up `X-Forwarded-For` and read the log: `ip` should be your own address, and the made-up one should appear only in `forwardedFor`.
 
 In production the session cookie is `Secure`, so the site must be served over HTTPS. Anyone who can open the site can sign in as the planner, because sign-in is a demo, so treat a public deployment as a sandbox.
 
