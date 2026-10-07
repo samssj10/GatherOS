@@ -30,7 +30,7 @@ export default function ReadinessCard() {
   return (
     <section
       aria-labelledby="readiness-title"
-      className="flex flex-[3_1_440px] flex-wrap items-center gap-7 rounded-3xl bg-ink p-7 text-canvas"
+      className="flex flex-[3_1_440px] flex-wrap items-center gap-7 rounded-3xl bg-ink p-5 text-canvas sm:p-7"
     >
       <div className="relative size-37 flex-none">
         <svg width="148" height="148" viewBox="0 0 148 148" aria-hidden="true">

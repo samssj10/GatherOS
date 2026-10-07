@@ -45,7 +45,7 @@ export function DroppableDayChip({ day, onPage, sourceDay, flashing, keyboardTar
       data-day={day}
       aria-current={onPage ? 'true' : undefined}
       // The dashed border is 2px wide, so the side padding gives up a pixel to keep the button the same size.
-      className={`relative inline-flex min-h-10 items-center gap-1.5 rounded-[10px] border text-sm font-medium transition-[scale,background-color,box-shadow,opacity] ${
+      className={`relative inline-flex min-h-11 items-center gap-1.5 lg:min-h-10 rounded-[10px] border text-sm font-medium transition-[scale,background-color,box-shadow,opacity] ${
         target || flashing ? 'border-2 px-[13px]' : 'px-3.5'
       } ${isSource ? 'opacity-40' : ''} ${look}`}
     >

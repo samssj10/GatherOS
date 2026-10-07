@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Fragment } from 'react';
 import type { ReactNode, Ref } from 'react';
-import { pageCount, pageOfDay, rangeLabel } from '@/utils/itineraryPages';
+import { DAYS_PER_PAGE, pageCount, pageOfDay, rangeLabel } from '@/utils/itineraryPages';
 
 const stepButtonClass =
   'flex size-11 items-center justify-center rounded-xl transition-colors disabled:pointer-events-none disabled:opacity-35';
@@ -14,7 +14,7 @@ export function DayButton({ day, onPage, onSelect }: { day: number; onPage: bool
       onClick={onSelect}
       data-day={day}
       aria-current={onPage ? 'true' : undefined}
-      className={`inline-flex min-h-10 items-center rounded-[10px] border px-3.5 text-sm font-medium transition-colors ${
+      className={`inline-flex min-h-11 items-center rounded-[10px] border px-3.5 lg:min-h-10 text-sm font-medium transition-colors ${
         onPage ? 'border-ink bg-ink text-white hover:bg-ink-active' : 'border-field bg-white text-ink hover:bg-wash'
       }`}
     >
@@ -27,6 +27,8 @@ interface JumpBarProps {
   /** Every day of the trip, in order. */
   days: readonly number[];
   page: number;
+  /** How many days a page holds. Defaults to the wide-screen three. */
+  perPage?: number;
   /** Draws one day's button. The planner swaps in a drop target; everyone else uses DayButton. */
   renderDay: (day: number, onPage: boolean) => ReactNode;
   onPrevious: () => void;
@@ -39,20 +41,29 @@ interface JumpBarProps {
  * Sits above a board on trips longer than one page: a button per day, the "Days 1–3 of 4" label
  * and the previous / next page buttons.
  */
-export function DayJumpBar({ days, page, renderDay, onPrevious, onNext, previousRef, nextRef }: JumpBarProps) {
-  const lastPage = pageCount(days.length) - 1;
+export function DayJumpBar({
+  days,
+  page,
+  perPage = DAYS_PER_PAGE,
+  renderDay,
+  onPrevious,
+  onNext,
+  previousRef,
+  nextRef,
+}: JumpBarProps) {
+  const lastPage = pageCount(days.length, perPage) - 1;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white py-2 pr-2 pl-3.5">
       <nav aria-label="Jump to day" className="flex flex-wrap items-center gap-1.5">
         {days.map((day) => (
-          <Fragment key={day}>{renderDay(day, pageOfDay(days, day) === page)}</Fragment>
+          <Fragment key={day}>{renderDay(day, pageOfDay(days, day, perPage) === page)}</Fragment>
         ))}
       </nav>
 
       <div className="flex items-center gap-2">
         <span aria-live="polite" className="px-1.5 text-sm text-body">
-          {rangeLabel(days, page)}
+          {rangeLabel(days, page, perPage)}
         </span>
         <button
           ref={previousRef}

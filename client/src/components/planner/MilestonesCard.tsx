@@ -32,7 +32,7 @@ export default function MilestonesCard() {
   return (
     <section
       aria-labelledby="milestones-title"
-      className="flex flex-[2_1_320px] flex-col gap-1.5 rounded-3xl border border-line bg-white p-6"
+      className="flex flex-[2_1_320px] flex-col gap-1.5 rounded-3xl border border-line bg-white p-5 sm:p-6"
     >
       <div className="mb-2 flex items-baseline justify-between">
         <h2 id="milestones-title" className="font-display text-xl font-bold">

@@ -40,6 +40,9 @@ export default defineConfig({
         SESSION_SECRET,
         EVENT_START_DATE,
         EVENT_NOW,
+        // Every test calls the API from the same address, and the suite is large enough to pass the default
+        // 300 requests a minute, which made a data card occasionally fail to load. No test is about this limit.
+        RATE_LIMIT_MAX: '100000',
         // Blank on purpose: the AI call is mocked in the browser, and a real key must never be spent by a test.
         ANTHROPIC_API_KEY: '',
       },

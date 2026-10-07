@@ -7,7 +7,6 @@ import { useDayPaging } from '@/hooks/useDayPaging';
 import { focusDay } from '@/utils/checkIn';
 import { badgeHints, badgeProgress, XP } from '@/utils/gamification';
 import { categoryLabel, categoryStyle } from '@/utils/format';
-import { pageOfDay } from '@/utils/itineraryPages';
 
 /** Stamp badges that can still be earned on the trip, for the "Badges in play" summary. */
 const STAMP_BADGES = new Set(['frontrow', 'sealegs', 'fullhouse']);
@@ -21,7 +20,7 @@ export default function JourneyBoard({ progress }: { progress: AttendeeProgress 
   const accepted = attendee.rsvpStatus === 'accepted';
 
   const days = [...new Set(sessions.map((session) => session.day))].sort((a, b) => a - b);
-  const paging = useDayPaging(days, pageOfDay(days, focusDay(sessions) ?? days[0]));
+  const paging = useDayPaging(days, { initialDay: focusDay(sessions) });
   const unstamped = sessions.filter((session) => !stamps.has(session.id));
   const inPlay = badges.filter((badge) => STAMP_BADGES.has(badge.id) && !badge.earned);
 
@@ -77,6 +76,7 @@ export default function JourneyBoard({ progress }: { progress: AttendeeProgress 
         <DayJumpBar
           days={days}
           page={paging.page}
+          perPage={paging.perPage}
           renderDay={(day, onPage) => (
             <DayButton day={day} onPage={onPage} onSelect={() => paging.showDay(day)} />
           )}

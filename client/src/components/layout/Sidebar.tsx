@@ -1,24 +1,10 @@
-import { LayoutGrid, LogIn, Users } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAttendeeSummary } from '@/api/attendees';
+import { PLANNER_NAV } from '@/components/layout/plannerNav';
 import HostRankCard from '@/components/planner/HostRankCard';
 import { useAuth } from '@/hooks/useAuth';
 import { formatNumber, initials } from '@/utils/format';
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-  end?: boolean;
-  /** Shows the pending-RSVP count next to the label. */
-  showPending?: boolean;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { to: '/planner', label: 'Dashboard', icon: LayoutGrid, end: true },
-  { to: '/planner/attendees', label: 'Attendees', icon: Users, showPending: true },
-];
 
 export default function Sidebar() {
   const { session, signOut } = useAuth();
@@ -27,7 +13,7 @@ export default function Sidebar() {
   const onDashboard = useLocation().pathname === '/planner';
 
   return (
-    <aside className="flex flex-col gap-7 bg-ink px-4.5 py-6 text-canvas lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+    <aside className="hidden flex-col gap-7 bg-ink px-4.5 py-6 text-canvas lg:sticky lg:top-0 lg:flex lg:h-screen lg:overflow-y-auto">
       <div className="flex items-center gap-3 px-2">
         <span className="flex size-9.5 items-center justify-center rounded-[11px] bg-brand font-display text-xl font-extrabold text-white">
           G
@@ -36,7 +22,7 @@ export default function Sidebar() {
       </div>
 
       <nav aria-label="Planner" className="flex flex-col gap-1">
-        {NAV_ITEMS.map(({ to, label, icon: Icon, end, showPending }) => (
+        {PLANNER_NAV.map(({ to, label, icon: Icon, end, showPending }) => (
           <NavLink
             key={to}
             to={to}

@@ -32,7 +32,7 @@ export default function BudgetCard() {
   return (
     <section
       aria-labelledby="budget-title"
-      className="flex flex-[3_1_440px] flex-col gap-5 rounded-3xl border border-line bg-white p-6"
+      className="flex flex-[3_1_440px] flex-col gap-5 rounded-3xl border border-line bg-white p-5 sm:p-6"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="budget-title" className="font-display text-xl font-bold">
@@ -67,19 +67,19 @@ export default function BudgetCard() {
         </ul>
       </div>
 
-      <dl className="grid grid-cols-3 gap-4 border-t border-hairline pt-4.5">
-        <div>
+      <dl className="grid grid-cols-1 gap-3 border-t border-hairline pt-4.5 sm:grid-cols-3 sm:gap-4">
+        <div className="flex items-baseline justify-between gap-3 sm:block">
           <dt className="text-[13px] text-muted">Total budget</dt>
-          <dd className="mt-1 font-display text-3xl font-bold">{formatCurrency(budget)}</dd>
+          <dd className="font-display text-2xl font-bold sm:mt-1 lg:text-3xl">{formatCurrency(budget)}</dd>
         </div>
-        <div>
+        <div className="flex items-baseline justify-between gap-3 sm:block">
           <dt className="text-[13px] text-muted">{isDraft ? 'Estimated spend (draft)' : 'Estimated spend'}</dt>
-          <dd className="mt-1 font-display text-3xl font-bold">{formatCurrency(spend)}</dd>
+          <dd className="font-display text-2xl font-bold sm:mt-1 lg:text-3xl">{formatCurrency(spend)}</dd>
         </div>
-        <div>
+        <div className="flex items-baseline justify-between gap-3 sm:block">
           <dt className="text-[13px] text-muted">{remaining < 0 ? 'Over budget' : 'Remaining'}</dt>
           <dd
-            className={`mt-1 font-display text-3xl font-bold ${remaining < 0 ? 'text-bad-ink' : 'text-ok-ink'}`}
+            className={`font-display text-2xl font-bold sm:mt-1 lg:text-3xl ${remaining < 0 ? 'text-bad-ink' : 'text-ok-ink'}`}
           >
             {formatCurrency(Math.abs(remaining))}
           </dd>
