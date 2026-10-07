@@ -398,3 +398,135 @@ test.describe('the itinerary board when the screen changes size', () => {
     await expect(rangeText(page, 'Days 4–5 of 5')).toBeVisible();
   });
 });
+
+// ---- the roster: cards on a phone and a tablet, the table on a wide screen ----
+
+const rosterCards = (page: Page) => page.getByTestId('roster-row');
+const rosterNames = (page: Page) => rosterCards(page).getByTestId('roster-name').allTextContents();
+const showing = (page: Page) => page.getByText(/^Showing /);
+
+async function openRoster(page: Page) {
+  await open(page, '/planner/attendees');
+  await expect(rosterCards(page).first()).toBeVisible();
+}
+
+for (const [name, size] of [['phone', PHONE], ['tablet', TABLET]] as const) {
+  test.describe(`the roster on a ${name}`, () => {
+    test.use({ viewport: size, hasTouch: true, isMobile: true });
+
+    test('is a list of cards, not a table', async ({ page }) => {
+      await openRoster(page);
+      await expect(page.getByRole('table')).toHaveCount(0);
+      await expect(page.getByRole('list', { name: 'Attendee roster' })).toBeVisible();
+
+      const first = rosterCards(page).first();
+      await expect(first.getByTestId('roster-name')).not.toBeEmpty();
+      await expect(first).toContainText('@');
+      await expect(first).toContainText('RSVP:');
+      await expect(first).toContainText('Department:');
+      await expect(first).toContainText('Trip ready:');
+    });
+
+    test('fits the screen, with no text over other text', async ({ page }) => {
+      await openRoster(page);
+      expect(await fitsAcross(page)).toBe(true);
+      expect(await overlappingText(page, '[role="list"]')).toEqual([]);
+    });
+
+    test('keeps only the cards near the screen in the page, however far you scroll', async ({ page }) => {
+      await openRoster(page);
+      expect(await rosterCards(page).count()).toBeLessThan(60);
+      const before = await rosterNames(page);
+
+      await page.evaluate(() => window.scrollTo(0, 60_000));
+      await expect.poll(async () => (await rosterNames(page))[0]).not.toBe(before[0]);
+      expect(await rosterCards(page).count()).toBeLessThan(60);
+
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await expect.poll(async () => (await rosterNames(page))[0]).toBe(before[0]);
+    });
+
+    test('raises no browser errors while you scroll, search and filter', async ({ page }) => {
+      // Page errors, console errors and the window's own error events (where "ResizeObserver loop" shows up).
+      const errors: string[] = [];
+      page.on('pageerror', (error) => errors.push(error.message));
+      page.on('console', (message) => {
+        if (message.type() === 'error') errors.push(message.text());
+      });
+      await page.addInitScript(() => {
+        window.addEventListener('error', (event) => {
+          (window as unknown as { __errors: string[] }).__errors ??= [];
+          (window as unknown as { __errors: string[] }).__errors.push(event.message);
+        });
+      });
+      await openRoster(page);
+      await page.evaluate(() => window.scrollTo(0, 20_000));
+      await page.getByLabel('Search attendees by name, email or department').fill('a');
+      await page.getByRole('button', { name: /^Pending/ }).click();
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForTimeout(500);
+      const windowErrors = await page.evaluate(() => (window as unknown as { __errors?: string[] }).__errors ?? []);
+      expect([...errors, ...windowErrors]).toEqual([]);
+    });
+
+    test('searches the roster', async ({ page }) => {
+      await openRoster(page);
+      await page.getByLabel('Search attendees by name, email or department').fill('amara');
+      await expect(showing(page)).toContainText('matches for “amara”');
+      const names = await rosterNames(page);
+      expect(names.length).toBeGreaterThan(0);
+      for (const person of names) expect(person.toLowerCase()).toContain('amara');
+    });
+
+    test('filters the roster by response', async ({ page }) => {
+      await openRoster(page);
+      await page.getByRole('button', { name: /^Pending/ }).click();
+      await expect(showing(page)).toContainText('of 2,500 attendees');
+      await expect(showing(page)).toContainText('Showing 900');
+      const pills = await rosterCards(page).evaluateAll((cards) => cards.map((card) => /RSVP: pending/.test(card.textContent ?? '')));
+      expect(pills.length).toBeGreaterThan(0);
+      expect(pills.every(Boolean)).toBe(true);
+    });
+
+    test('has touch-sized controls on every card', async ({ page }) => {
+      await openRoster(page);
+      await page.getByRole('button', { name: /^Pending/ }).click();
+      await expect(showing(page)).toContainText('Showing 900');
+      const small = await page.locator('[role="list"]').evaluate((list) => {
+        const found: string[] = [];
+        for (const control of list.querySelectorAll('button, a')) {
+          const rect = control.getBoundingClientRect();
+          if (rect.width > 0 && rect.height < 43.5) found.push(`${control.getAttribute('aria-label')} ${Math.round(rect.height)}px`);
+        }
+        return found;
+      });
+      expect(small).toEqual([]);
+    });
+  });
+}
+
+test.describe('nudging from a card on a phone', () => {
+  test.use({ viewport: PHONE, hasTouch: true, isMobile: true });
+
+  test('nudges one attendee and marks the card', async ({ page }) => {
+    await openRoster(page);
+    await page.getByRole('button', { name: /^Pending/ }).click();
+    await expect(showing(page)).toContainText('Showing 900');
+    const nudge = rosterCards(page).first().getByRole('button', { name: /^Nudge / });
+    await nudge.tap();
+    await expect(rosterCards(page).first().getByRole('button', { name: /^Already nudged / })).toBeDisabled();
+    await expect(rosterCards(page).first()).toContainText('Nudged');
+  });
+});
+
+test.describe('the roster on a wide screen', () => {
+  test.use({ viewport: DESKTOP });
+
+  test('is still the table, with its own scrolling rows', async ({ page }) => {
+    await openRoster(page);
+    await expect(page.getByRole('table', { name: 'Attendee roster' })).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Attendee roster' })).toHaveCount(0);
+    await expect(page.getByTestId('roster-viewport')).toBeVisible();
+    expect(await rosterCards(page).count()).toBeLessThan(40);
+  });
+});
