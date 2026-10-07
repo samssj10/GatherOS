@@ -13,7 +13,6 @@ interface DemoAccount {
   id: 'planner' | 'attendee';
   title: string;
   description: string;
-  tag: string;
   /** Short name used in the button: "Continue as ...". */
   as: string;
   email: string;
@@ -26,7 +25,6 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     id: 'planner',
     title: 'Planner demo',
     description: 'Budget, RSVPs and the itinerary board',
-    tag: 'DESKTOP',
     as: 'planner',
     email: 'planner@gatheros.example.com',
     icon: LayoutGrid,
@@ -35,7 +33,6 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     id: 'attendee',
     title: 'Attendee demo',
     description: 'RSVP, stamps and badges as Amara',
-    tag: 'MOBILE',
     as: 'Amara',
     email: 'amara.silva.0001@example.com',
     icon: Award,
@@ -248,15 +245,12 @@ export default function Login() {
                     active ? 'border-brand bg-brand-tint' : 'border-line bg-white hover:bg-wash'
                   }`}
                 >
-                  <span className="flex w-full items-center justify-between">
-                    <span
-                      className={`flex size-10 items-center justify-center rounded-xl ${
-                        active ? 'bg-brand text-white' : 'bg-ink text-lime'
-                      }`}
-                    >
-                      <Icon className="size-5" strokeWidth={1.9} aria-hidden="true" />
-                    </span>
-                    <span className="font-mono text-[11px] font-semibold text-body">{account.tag}</span>
+                  <span
+                    className={`flex size-10 items-center justify-center rounded-xl ${
+                      active ? 'bg-brand text-white' : 'bg-ink text-lime'
+                    }`}
+                  >
+                    <Icon className="size-5" strokeWidth={1.9} aria-hidden="true" />
                   </span>
                   <span>
                     <span className="block text-base leading-[normal] font-semibold">{account.title}</span>

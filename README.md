@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/samssj10/GatherOS/actions/workflows/ci.yml/badge.svg)](https://github.com/samssj10/GatherOS/actions/workflows/ci.yml)
 
-**A multi-sided corporate offsite platform, designed as a game.** Planners run their offsite from a "mission control" dashboard: milestones, a host rank, a budget breakdown and an AI-drafted, drag-and-drop itinerary. Attendees get a companion, mobile-first with a full desktop layout, where RSVPing, picking a meal and checking in at sessions earns XP, stamps and badges. Both personas run from one React app on a Node.js backend-for-frontend (BFF), with itineraries drafted by Claude.
+**A multi-sided corporate offsite platform, designed as a game.** Planners run their offsite from a "mission control" dashboard, on a desktop or a phone: milestones, a host rank, a budget breakdown and an AI-drafted, drag-and-drop itinerary. Attendees get a companion, mobile-first with a full desktop layout, where RSVPing, picking a meal and checking in at sessions earns XP, stamps and badges. Both personas run from one React app on a Node.js backend-for-frontend (BFF), with itineraries drafted by Claude.
 
 <p align="center">
   <img src="docs/screenshots/planner-dashboard.png" alt="Planner dashboard: readiness hero, milestones, budget by category, RSVP overview and a three-day itinerary board" width="900">
@@ -14,6 +14,12 @@
   <img src="docs/screenshots/planner-roster.png" alt="Virtualized roster of 2,500 attendees with response filters, a Half House banner and a Trip ready meter" width="900">
   <br>
   <sub><b>Roster:</b> 2,500 attendees, filterable, with a "Trip ready" meter and one-click nudges</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/planner-mobile.png" alt="The planner on a phone: the dashboard with its top bar and tab bar, the itinerary board one day at a time, and the roster as cards" width="900">
+  <br>
+  <sub><b>Planner on a phone:</b> a top bar and tab bar, the itinerary one day at a time, and the roster as cards</sub>
 </p>
 
 <p align="center">
@@ -48,12 +54,13 @@
 
 ## Features
 
-### For planners (desktop)
+### For planners (desktop, tablet and phone)
 
-- **Mission control.** A readiness hero tells you the one thing to do next ("14 more yeses to fill half the house"), backed by four milestones: plan every day of the trip (three by default, up to seven), keep spend under half the budget, reach Half House (half the invitees accepted) and get everyone to answer. Completing them raises your **host rank**, shown in the sidebar.
+- **Mission control.** A readiness hero tells you the one thing to do next ("14 more yeses to fill half the house"), backed by four milestones: plan every day of the trip (three by default, up to seven), keep spend under half the budget, reach Half House (half the invitees accepted) and get everyone to answer. Completing them raises your **host rank**, shown in the sidebar (on a phone, on the dashboard itself).
 - **AI itinerary drafts.** Describe the offsite, optionally set the city, days and attendee count, and Claude returns a structured itinerary. It lands on the board as an *unsaved draft*; milestones, rank and budget recalculate for it until you save or discard it.
 - **Drag-and-drop itinerary.** Reorder sessions within a day or drop them onto another day, by mouse or keyboard. Every card also has up, down, previous-day and next-day buttons, and keyboard focus stays with the card after any move. After any move the affected day is re-timed automatically so sessions run back to back, 15 minutes apart, each keeping its own duration.
 - **Long trips are paged.** A trip of up to three days shows every day. Longer trips (up to seven) show three days at a time, with a jump bar of Day buttons, previous and next buttons and dashed side strips that name the neighbouring days. Drop a session on any Day button to send it to the end of that day, even when that day is on another page; with the keyboard, pick a session up with Space, Tab along the Day buttons and drop with Space. Each session also has a *Move to another day* select. Every cross-day move says where the session landed and its new time, offers *View Day N* when that day is off screen, and **Undo** puts both days back exactly as they were, including the gaps that re-timing closed.
+- **On a phone.** A top bar with the account menu and a bottom tab bar replace the sidebar. The itinerary board shows one day at a time (two on a tablet) with day tabs, and sessions can be moved with the same buttons, the Day tabs or a touch drag by the handle. The roster becomes a list of cards, with only the ones near the screen in the page, and each card has its own Nudge button. Every control is at least 44px.
 - **Room check-in code.** Every saved session card has a **Code** button that opens a full-screen display for the room: a QR code, a six-character code under it, a countdown to the next code and a live "checked in n of N" bar. The code changes every minute and only works while the session is live.
 - **Budget breakdown.** A stacked bar by category (meals, activities, workshops, keynotes) with an "on track", "close to the limit" or "over budget" status.
 - **RSVP overview.** Accepted, pending and declined totals with a Half House marker.
@@ -262,9 +269,9 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 
 ## Testing and CI
 
-**Unit tests (Vitest, 202 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
+**Unit tests (Vitest, 212 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
 
-**End-to-end (Playwright).** Five specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
+**End-to-end (Playwright).** Seven specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
 
 1. Inject a signed planner cookie to bypass the login screen.
 2. Intercept `POST /api/ai/generate-schedule` with `page.route()` and return a hardcoded valid response.
@@ -277,6 +284,10 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 [`e2e/move-focus.spec.ts`](e2e/move-focus.spec.ts) checks that keyboard focus follows a session when it moves (the arrows, the day select and a keyboard drag), so a keyboard or screen-reader user is never dropped back to the top of the page.
 
 [`e2e/itinerary-moves.spec.ts`](e2e/itinerary-moves.spec.ts) covers long trips on a mocked five-day draft: dragging a session onto a Day button, the toast with *View* and *Undo*, a keyboard drag along the Day buttons (and Escape to cancel), the *Move to another day* select, and the server refusing anything but a valid day and times on `PUT /schedule/timing`.
+
+[`e2e/planner-mobile.spec.ts`](e2e/planner-mobile.spec.ts) covers the planner on a phone and a tablet: the top bar and tab bar, a dashboard and roster with nothing sticking out sideways or overlapping, the board one day at a time (including a resize and a touch drag), and the roster cards with search, filters and Nudge.
+
+[`e2e/sign-in.spec.ts`](e2e/sign-in.spec.ts) checks the two demo cards on a phone and a wide screen, and signing in as the planner from one.
 
 The suite starts its own BFF and client on separate ports (3100 and 5273), so it never collides with `npm run dev`. It needs no `.env` file and no API key, because the AI call is mocked and the AI key is blanked on purpose.
 
@@ -291,9 +302,9 @@ GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)) runs on every push and pul
 
 The server can host the built app itself, so one small Node service is enough. The data is in memory, so it resets whenever the process restarts, and every visitor shares one sandbox. A host that keeps a process running fits; serverless functions do not, because each function keeps its own memory.
 
-1. **Build:** `npm install --prefix client && npm install --prefix server && npm run build --prefix client && npm run build --prefix server`
+1. **Build:** `npm install --include=dev --prefix client && npm install --include=dev --prefix server && npm run build --prefix client && npm run build --prefix server`
 2. **Start:** `npm run start --prefix server` (it listens on `PORT`).
-3. **Set these environment variables on the host** (never commit them): `NODE_ENV=production`, `SESSION_SECRET` (a random string of at least 32 characters), `SERVE_CLIENT=true` and `TRUST_PROXY_HOPS=1`. Use Node 22.
+3. **Set these environment variables on the host** (never commit them): `NODE_ENV=production`, `SESSION_SECRET` (a random string of at least 32 characters), `SERVE_CLIENT=true` and `TRUST_PROXY_HOPS` (see step 6; Render needs `3`). Use Node 22.
 4. **Optional:** `ANTHROPIC_API_KEY` turns the AI bar on (give it a key with a spend limit, because every visitor can use it), and `DEMO_LIVE_LOOP=true` keeps a session live so check-in can always be tried.
 5. **Health check:** `/api/health`.
 6. **Setting `TRUST_PROXY_HOPS`:** it should equal the number of proxies in front of the server. If rate limits seem to count visitors together, turn on `LOG_CLIENT_ADDRESS` briefly and read the `ip` and `forwardedFor` fields in the request log, then turn it off again.
