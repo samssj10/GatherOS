@@ -1,5 +1,5 @@
-import { LogIn } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
+import SignOutIcon from '@/components/layout/SignOutIcon';
 import { PLANNER_NAV } from '@/components/layout/plannerNav';
 import HostRankCard from '@/components/planner/HostRankCard';
 import { useAuth } from '@/hooks/useAuth';
@@ -66,7 +66,7 @@ export default function Sidebar() {
           onClick={signOut}
           className="-mx-1.5 flex min-h-11 items-center gap-2.5 rounded-[10px] px-1.5 text-sm text-ink-text transition-colors hover:bg-ink-active/60 hover:text-white"
         >
-          <LogIn className="size-4.5" strokeWidth={1.8} aria-hidden="true" />
+          <SignOutIcon className="size-4.5" />
           Sign out
         </button>
       </div>

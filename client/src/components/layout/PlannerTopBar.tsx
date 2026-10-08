@@ -1,5 +1,5 @@
-import { LogIn } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
+import SignOutIcon from '@/components/layout/SignOutIcon';
 import { useAuth } from '@/hooks/useAuth';
 import { initials } from '@/utils/format';
 
@@ -69,7 +69,7 @@ export default function PlannerTopBar() {
             onClick={signOut}
             className="mt-1 flex min-h-11 w-full items-center gap-2.5 rounded-[10px] px-2 text-sm text-ink-text transition-colors hover:bg-ink-active/60 hover:text-white"
           >
-            <LogIn className="size-4.5" strokeWidth={1.8} aria-hidden="true" />
+            <SignOutIcon className="size-4.5" />
             Sign out
           </button>
         </div>

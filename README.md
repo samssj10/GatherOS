@@ -278,7 +278,7 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 
 **Unit tests (Vitest, 217 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
 
-**End-to-end (Playwright).** Eight specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
+**End-to-end (Playwright).** Nine specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
 
 1. Inject a signed planner cookie to bypass the login screen.
 2. Intercept `POST /api/ai/generate-schedule` with `page.route()` and return a hardcoded valid response.
@@ -295,6 +295,8 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 [`e2e/planner-mobile.spec.ts`](e2e/planner-mobile.spec.ts) covers the planner on a phone and a tablet: the top bar and tab bar, a dashboard and roster with nothing sticking out sideways or overlapping, the board one day at a time (including a resize and a touch drag), and the roster cards with search, filters and Nudge.
 
 [`e2e/room-preview.spec.ts`](e2e/room-preview.spec.ts) checks that the Code link appears only on the live session, that a session which is not live keeps its "Not live yet" notice, and that the sample room screens step through the sessions, show `TEST42` and never ask the server for a real code.
+
+[`e2e/sign-out-icon.spec.ts`](e2e/sign-out-icon.spec.ts) checks that every sign-out control (planner sidebar, planner phone menu, both attendee bars) uses the design's arrow-leaving-a-bracket icon.
 
 [`e2e/sign-in.spec.ts`](e2e/sign-in.spec.ts) checks the two demo cards on a phone and a wide screen, and signing in as the planner from one.
 

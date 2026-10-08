@@ -1,4 +1,3 @@
-import { LogIn } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ErrorNotice from '@/components/ErrorNotice';
 import DayGlance from '@/components/attendee/DayGlance';
@@ -7,6 +6,7 @@ import LevelCard from '@/components/attendee/LevelCard';
 import QuestList from '@/components/attendee/QuestList';
 import RsvpCard from '@/components/attendee/RsvpCard';
 import Skeleton from '@/components/Skeleton';
+import SignOutIcon from '@/components/layout/SignOutIcon';
 import { useAttendeeProgress } from '@/hooks/useAttendeeProgress';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -73,7 +73,7 @@ export default function AttendeeView() {
           aria-label="Sign out"
           className="flex size-11 items-center justify-center rounded-xl border border-field bg-white text-body transition-colors hover:bg-wash lg:hidden"
         >
-          <LogIn className="size-5" strokeWidth={1.8} aria-hidden="true" />
+          <SignOutIcon className="size-5" />
         </button>
       </header>
 
