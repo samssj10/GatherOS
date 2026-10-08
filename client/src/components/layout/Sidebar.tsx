@@ -1,14 +1,12 @@
 import { LogIn } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useAttendeeSummary } from '@/api/attendees';
 import { PLANNER_NAV } from '@/components/layout/plannerNav';
 import HostRankCard from '@/components/planner/HostRankCard';
 import { useAuth } from '@/hooks/useAuth';
-import { formatNumber, initials } from '@/utils/format';
+import { initials } from '@/utils/format';
 
 export default function Sidebar() {
   const { session, signOut } = useAuth();
-  const pending = useAttendeeSummary().data?.rsvp.pending;
   // The rank is earned on the dashboard, so the card only appears there.
   const onDashboard = useLocation().pathname === '/planner';
 
@@ -22,7 +20,7 @@ export default function Sidebar() {
       </div>
 
       <nav aria-label="Planner" className="flex flex-col gap-1">
-        {PLANNER_NAV.map(({ to, label, icon: Icon, end, showPending }) => (
+        {PLANNER_NAV.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -43,12 +41,6 @@ export default function Sidebar() {
                   aria-hidden="true"
                 />
                 {label}
-                {showPending && pending !== undefined && (
-                  <span className="ml-auto rounded-full bg-ink-line px-2 py-0.5 font-mono text-xs text-[#e6e8f0]">
-                    <span className="sr-only">{formatNumber(pending)} pending responses</span>
-                    <span aria-hidden="true">{formatNumber(pending)}</span>
-                  </span>
-                )}
               </>
             )}
           </NavLink>

@@ -37,9 +37,10 @@ for (const [name, size] of [['phone', PHONE], ['tablet', TABLET]] as const) {
       await expect(page.getByRole('complementary')).toHaveCount(0);
     });
 
-    test('moves between the pages with the tab bar and shows the pending count', async ({ page }) => {
+    test('moves between the pages with the tab bar, which carries no count badge', async ({ page }) => {
       await open(page);
-      await expect(tabBar(page).getByText('900 pending responses')).toBeAttached();
+      await expect(tabBar(page).getByText(/pending responses/)).toHaveCount(0);
+      await expect(tabBar(page).getByRole('link', { name: 'Attendees', exact: true })).toBeVisible();
       await tabBar(page).getByRole('link', { name: /^Attendees/ }).click();
       await expect(page).toHaveURL(/\/planner\/attendees$/);
       await expect(page.getByRole('heading', { level: 1, name: 'Attendees' })).toBeVisible();
@@ -52,7 +53,7 @@ for (const [name, size] of [['phone', PHONE], ['tablet', TABLET]] as const) {
       await open(page);
       if (name === 'phone') {
         await expect(hostRank(page)).toHaveCount(0);
-        await expect(page.locator('section[aria-labelledby="readiness-title"]')).toContainText(/Trail Builder · 2 of 4 milestones/);
+        await expect(page.locator('section[aria-labelledby="readiness-title"]')).toContainText(/Navigator · 2 of 4 milestones/);
       } else {
         await expect(hostRank(page)).toBeVisible();
       }

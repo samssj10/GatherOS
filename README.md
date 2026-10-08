@@ -93,7 +93,7 @@ All of this is derived from real data; nothing is hard-coded to the demo.
 
 Levels: Newcomer (0 XP), Trailblazer (150), Explorer (300), Legend (450). Badges are earned from those actions; Front Row, Sea Legs and Full House mean stamping every keynote, every activity and every session, so they adapt to whatever itinerary exists. Only attendees who are going can collect stamps.
 
-Planner ranks follow completed milestones: Scout (0), Pathfinder (1), Trail Builder (2), Trailblazer (3), Summit Host (4).
+Planner ranks follow completed milestones: Scout (0), Pathfinder (1), Navigator (2), Captain (3), Summit Host (4).
 
 ## Tech stack
 

@@ -12,7 +12,7 @@ function describeMissingDays(days: number[]): string {
 }
 
 /** Planner ranks, indexed by how many milestones are complete (0 to 4). */
-const HOST_RANKS = ['Scout', 'Pathfinder', 'Trail Builder', 'Trailblazer', 'Summit Host'] as const;
+const HOST_RANKS = ['Scout', 'Pathfinder', 'Navigator', 'Captain', 'Summit Host'] as const;
 
 export type MilestoneId = 'itinerary' | 'budget' | 'half-house' | 'everyone';
 
