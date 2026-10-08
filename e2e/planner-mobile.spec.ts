@@ -641,3 +641,57 @@ test.describe('the roster table wording on a wide screen', () => {
     await expect(first).not.toContainText('None');
   });
 });
+
+// ---- the Trip ready rule and its explanation ----
+
+test.describe('Trip ready on a wide screen', () => {
+  test.use({ viewport: DESKTOP });
+
+  test('has no footnote under the table; an info button in the column header explains the rule', async ({ page }) => {
+    await openRoster(page);
+    await expect(page.getByText(/Trip ready = /)).toHaveCount(0);
+
+    const info = page.getByRole('button', { name: 'What does Trip ready mean?' });
+    await expect(info).toHaveAttribute('aria-expanded', 'false');
+    await info.click();
+    await expect(info).toHaveAttribute('aria-expanded', 'true');
+    const help = page.locator('#trip-ready-help');
+    await expect(help).toBeVisible();
+    await expect(help).toContainText('accepted RSVP · dietary preference set · flight booked');
+    await expect(help).not.toContainText('answered');
+
+    // The popover stays inside the table.
+    const table = await page.getByRole('table', { name: 'Attendee roster' }).boundingBox();
+    const box = await help.boundingBox();
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual((table?.x ?? 0) + (table?.width ?? 0) + 1);
+    expect(box?.x ?? 0).toBeGreaterThanOrEqual(table?.x ?? 0);
+  });
+
+  test('closes the explanation with Escape and with a click elsewhere', async ({ page }) => {
+    await openRoster(page);
+    const info = page.getByRole('button', { name: 'What does Trip ready mean?' });
+    await info.click();
+    await expect(page.locator('#trip-ready-help')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#trip-ready-help')).toHaveCount(0);
+
+    await info.click();
+    await page.getByRole('heading', { level: 1, name: 'Attendees' }).click();
+    await expect(page.locator('#trip-ready-help')).toHaveCount(0);
+  });
+
+  test('shows "Not set" in muted grey and a real choice in the normal text colour', async ({ page }) => {
+    await openRoster(page);
+    const colours = async (text: string) =>
+      page.getByRole('cell', { name: text, exact: true }).first().evaluate((el) => getComputedStyle(el).color);
+    const notSet = await colours('Not set');
+    expect(notSet).toBe('rgb(95, 100, 120)');
+    // Someone who has picked a meal is in the normal body colour, so the two read differently.
+    await page.getByLabel('Search attendees by name, email or department').fill('lopez');
+    const chosen = await page
+      .getByRole('cell', { name: /^(Gluten-free|Vegan|Vegetarian|No restrictions)$/ })
+      .first()
+      .evaluate((el) => getComputedStyle(el).color);
+    expect(chosen).not.toBe(notSet);
+  });
+});

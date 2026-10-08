@@ -5,6 +5,7 @@ import {
   RSVP_STYLES,
   avatarTint,
   dietaryLabel,
+  hasDietaryChoice,
   tripReadiness,
 } from '@/components/planner/rosterShared';
 import type { RosterListProps } from '@/components/planner/rosterShared';
@@ -56,7 +57,7 @@ function RosterCard({
         {attendee.department}
         <span aria-hidden="true"> · </span>
         <span className="sr-only">. Dietary: </span>
-        {dietaryLabel(attendee)}
+        <span className={hasDietaryChoice(attendee) ? undefined : 'text-muted'}>{dietaryLabel(attendee)}</span>
       </p>
 
       <div className="flex items-center justify-between gap-3">

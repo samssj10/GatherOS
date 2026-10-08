@@ -70,7 +70,7 @@
 - **Room check-in code.** While a session is live, its card shows a lime **Live · Code** link that opens a full-screen display for the room: a QR code, a six-character code under it, a countdown to the next code and a live "checked in n of N" bar. The code changes every minute and only works while the session is live; before or after the session the screen says so. **Preview room screens**, in the itinerary header, steps through every session with a sample code (`TEST42`) and a SAMPLE QR so the projector can be tested before the event; it makes no check-in requests and cannot stamp anyone.
 - **Budget breakdown.** A stacked bar by category (meals, activities, workshops, keynotes) with an "on track", "close to the limit" or "over budget" status.
 - **RSVP overview.** Accepted, pending and declined totals with a Half House marker.
-- **Virtualized roster.** All 2,500 attendees, searchable and filterable by response, with only about 20 rows in the DOM at any time. A **Trip ready** meter shows who has answered, accepted and booked a flight, and **Nudge** reminds pending attendees one at a time or all at once.
+- **Virtualized roster.** All 2,500 attendees, searchable and filterable by response, with only about 20 rows in the DOM at any time. A **Trip ready** meter shows who has accepted, set a dietary preference and booked a flight (an info button in the column header explains it; someone who declined is not counted), and **Nudge** reminds pending attendees one at a time or all at once.
 
 ### For attendees (phone and desktop)
 
