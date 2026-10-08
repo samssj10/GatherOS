@@ -9,11 +9,12 @@ import type { AttendeeProgress } from '@/hooks/useAttendeeProgress';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { initials } from '@/utils/format';
+import { stampsHint } from '@/utils/gamification';
 
 /** Desktop-only tiles beside the passport holder: XP, stamps and badges at a glance. */
 function StatTiles({ progress }: { progress: AttendeeProgress }) {
   const { level, stamps, sessions, badges, earnedBadges } = progress;
-  const stampsLeft = sessions.length - stamps.size;
+  const firstDay = sessions.length > 0 ? Math.min(...sessions.map((session) => session.day)) : undefined;
   const badgesLeft = badges.length - earnedBadges;
 
   const tiles = [
@@ -30,7 +31,7 @@ function StatTiles({ progress }: { progress: AttendeeProgress }) {
           <span className="text-ink-text-3">/{sessions.length}</span>
         </>
       ),
-      sub: stamps.size === 0 ? 'Check in to collect' : stampsLeft === 0 ? 'All collected' : `${stampsLeft} to go`,
+      sub: stampsHint(stamps.size, sessions.length, firstDay),
     },
     {
       label: 'Badges',

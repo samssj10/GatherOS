@@ -6,6 +6,7 @@ import {
   buildBadges,
   buildQuests,
   computeXp,
+  stampsHint,
   levelInfo,
   sortSessions,
   validStamps,
@@ -267,5 +268,51 @@ describe('badgeProgress', () => {
 
   it('has nothing to report for a session that counts toward no badge', () => {
     expect(badgeProgress(ordered[1]!, ordered, new Set())).toEqual([]);
+  });
+});
+
+describe('badge wording', () => {
+  const how = (a: Attendee, id: string) => buildBadges(a, sessions).find((badge) => badge.id === id)?.how;
+
+  it('tells a locked badge what to do', () => {
+    const nothing = attendee();
+    expect(how(nothing, 'early')).toBe('Confirm your RSVP');
+    expect(how(nothing, 'fuelled')).toBe('Set your dietary preference');
+    expect(how(nothing, 'jetset')).toBe('Book your flight');
+    expect(how(nothing, 'frontrow')).toBe('Stamp every keynote');
+    expect(how(nothing, 'sealegs')).toBe('Stamp every activity');
+    expect(how(nothing, 'fullhouse')).toBe('Collect all 4 stamps');
+  });
+
+  it('says what an earned badge was earned for, in the past tense', () => {
+    const done = attendee({ rsvpStatus: 'accepted', dietaryConfirmed: true, flightAssigned: true });
+    expect(how(done, 'early')).toBe('Confirmed your RSVP');
+    expect(how(done, 'fuelled')).toBe('Shared your dietary preference');
+    expect(how(done, 'jetset')).toBe('Booked your flight');
+  });
+
+  it('switches a stamp badge to the past tense once every stamp is in', () => {
+    const everyone = attendee({ rsvpStatus: 'accepted', stamps: ['keynote-1', 'lunch', 'sailing', 'keynote-2'] });
+    expect(how(everyone, 'frontrow')).toBe('Stamped every keynote');
+    expect(how(everyone, 'sealegs')).toBe('Stamped every activity');
+    expect(how(everyone, 'fullhouse')).toBe('Collected all 4 stamps');
+  });
+});
+
+describe('stampsHint', () => {
+  it('says when the trip starts while there are no stamps', () => {
+    expect(stampsHint(0, 7, 1)).toBe('Starts on Day 1');
+  });
+
+  it('counts what is left once stamps start coming in', () => {
+    expect(stampsHint(2, 7, 1)).toBe('5 to go');
+  });
+
+  it('says when everything is collected', () => {
+    expect(stampsHint(7, 7, 1)).toBe('All collected');
+  });
+
+  it('falls back when there are no sessions to name a day', () => {
+    expect(stampsHint(0, 0, undefined)).toBe('Check in to collect');
   });
 });

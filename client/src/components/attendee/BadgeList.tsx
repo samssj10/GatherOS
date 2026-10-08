@@ -46,13 +46,9 @@ export default function BadgeList({ badges }: { badges: Badge[] }) {
               </p>
               <p className="text-[13px] text-muted">{badge.how}</p>
             </div>
-            <span
-              className={`font-mono text-[11px] font-semibold lg:col-start-2 lg:row-start-1 ${
-                badge.earned ? 'text-ok-ink' : 'text-muted'
-              }`}
-            >
-              {badge.earned ? 'EARNED' : 'LOCKED'}
-            </span>
+            {badge.earned && (
+              <span className="font-mono text-[11px] font-semibold text-ok-ink lg:col-start-2 lg:row-start-1">EARNED</span>
+            )}
           </li>
         ))}
       </ul>

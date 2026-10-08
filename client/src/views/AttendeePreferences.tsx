@@ -1,4 +1,4 @@
-import { Check, Leaf, Sprout, Star, Utensils, WheatOff } from 'lucide-react';
+import { Check, Info, Leaf, Sprout, Star, Utensils, WheatOff } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAttendee, useUpdateAttendee } from '@/api/attendees';
 import { useMySchedule } from '@/api/schedule';
@@ -69,9 +69,9 @@ function DietaryForm({ attendeeId }: { attendeeId: string }) {
 
   if (isPending) {
     return (
-      <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap">
-        {OPTIONS.map((option) => (
-          <Skeleton key={option.value} className="h-33 rounded-[20px] lg:h-42 lg:flex-[1_1_170px]" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
+        {OPTIONS.map((option, index) => (
+          <Skeleton key={option.value} className={`h-33 rounded-[20px] lg:h-42 ${index === OPTIONS.length - 1 ? 'lg:col-span-3' : ''}`} />
         ))}
       </div>
     );
@@ -83,14 +83,14 @@ function DietaryForm({ attendeeId }: { attendeeId: string }) {
     <>
       <fieldset>
         <legend className="sr-only">Dietary preference</legend>
-        <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap">
-          {OPTIONS.map((option) => {
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
+          {OPTIONS.map((option, index) => {
             const selected = confirmed && attendee.dietaryPreference === option.value;
             const Icon = option.icon;
             return (
               <label
                 key={option.value}
-                className={`relative flex min-h-33 cursor-pointer flex-col justify-between rounded-[20px] border-2 p-4 transition-colors lg:min-h-42 lg:flex-[1_1_170px] lg:p-4.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand ${
+                className={`relative flex min-h-33 cursor-pointer flex-col justify-between rounded-[20px] border-2 p-4 transition-colors lg:min-h-42 lg:p-4.5 ${index === OPTIONS.length - 1 ? 'lg:col-span-3' : ''} focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand ${
                   selected ? 'border-brand bg-brand-tint' : 'border-line bg-white hover:bg-wash'
                 }`}
               >
@@ -157,8 +157,9 @@ function DietaryForm({ attendeeId }: { attendeeId: string }) {
             </span>
           </div>
         ) : (
-          <p className="rounded-[20px] border-2 border-dashed border-ink-text p-4 text-sm text-body">
-            Pick one to complete this quest and earn +{XP.dietary} XP.
+          <p className="flex items-center gap-2.5 px-1 text-sm text-body">
+            <Info className="size-4.5 flex-none text-brand" strokeWidth={1.9} aria-hidden="true" />
+            Pick one to complete this quest and earn {XP.dietary} XP.
           </p>
         )}
       </div>
