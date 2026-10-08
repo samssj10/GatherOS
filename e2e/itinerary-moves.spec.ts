@@ -146,7 +146,7 @@ test('on a saved itinerary no card control sticks out of its card, even in narro
   await page.context().addCookies([sessionCookie(plannerSession)]);
   await page.goto('/planner');
   await expect(page.getByTestId('schedule-card').first()).toBeVisible();
-  // Saved sessions carry the Code button, so this is the widest footer a card gets.
+  // Saved sessions carry the Code link, so these are the busiest cards.
   await expect(page.getByRole('link', { name: /^Show check-in code for/ }).first()).toBeVisible();
 
   for (const width of [1100, 1280, 1440]) {
@@ -165,4 +165,26 @@ test('on a paged draft, with the day select, no card control sticks out of its c
   }
   await page.getByRole('button', { name: 'Show next days', exact: true }).click();
   expect(await controlsOutsideTheirCard(page), 'controls outside their card on page 2').toEqual([]);
+});
+
+test('puts the price and the four arrows on one line when the column is wide enough', async ({ page }) => {
+  await page.context().addCookies([sessionCookie(plannerSession)]);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/planner');
+  const card = page.getByTestId('schedule-card').first();
+  await expect(card).toBeVisible();
+  const price = await card.getByText(/^\$[\d,]+$/).boundingBox();
+  const arrows = await card.locator('[data-move]').evaluateAll((all) =>
+    all.map((el) => {
+      const rect = el.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom };
+    }),
+  );
+  expect(price).not.toBeNull();
+  expect(arrows).toHaveLength(4);
+  const priceMiddle = (price?.y ?? 0) + (price?.height ?? 0) / 2;
+  for (const arrow of arrows) {
+    expect(priceMiddle).toBeGreaterThan(arrow.top);
+    expect(priceMiddle).toBeLessThan(arrow.bottom);
+  }
 });

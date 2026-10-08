@@ -91,14 +91,14 @@ function CardBody({
   item,
   handle,
   actions,
-  afterCost,
+  roomLink,
   moveControl,
 }: {
   item: ScheduleItem;
   handle?: ReactNode;
   actions?: ReactNode;
-  /** Sits right after the price, e.g. the check-in code link. */
-  afterCost?: ReactNode;
+  /** Sits at the end of the time and place line, e.g. the check-in code link. */
+  roomLink?: ReactNode;
   /** A full-width row under the arrows, for jumping straight to any day. */
   moveControl?: ReactNode;
 }) {
@@ -122,13 +122,13 @@ function CardBody({
           <MapPin className="size-3.5" strokeWidth={2} aria-hidden="true" />
           {item.location}
         </span>
+        {roomLink}
       </div>
-      {/* Three fixed lines (price and code, arrows, day select) so nothing overflows a narrow column. */}
-      <div className="flex items-center gap-2.5 pl-8.5">
+      {/* Price on the left, the arrows on the right. In a column too narrow for both, the arrows drop to their own line. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-2 pl-8.5">
         <span className="font-mono text-sm font-semibold">{formatCurrency(item.costEstimate)}</span>
-        {afterCost}
+        {actions && <div className="ml-auto">{actions}</div>}
       </div>
-      {actions && <div className="flex justify-end">{actions}</div>}
       {moveControl && <div className="pl-8.5">{moveControl}</div>}
     </>
   );
@@ -208,7 +208,7 @@ function ScheduleCard({
             </select>
           )
         }
-        afterCost={
+        roomLink={
           showCode ? (
             <Link
               to={`/planner/sessions/${item.id}/code`}
