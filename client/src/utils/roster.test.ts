@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dietaryLabel, tripReadiness } from '@/utils/roster';
+import { dietaryLabel, hasDietaryChoice, tripReadiness } from '@/utils/roster';
 
 describe('dietaryLabel', () => {
   it('says "Not set" until a choice has been made, whatever the stored value is', () => {
@@ -13,17 +13,33 @@ describe('dietaryLabel', () => {
   });
 });
 
+describe('hasDietaryChoice', () => {
+  it('is true only once a choice has been made', () => {
+    expect(hasDietaryChoice({ dietaryConfirmed: false })).toBe(false);
+    expect(hasDietaryChoice({ dietaryConfirmed: true })).toBe(true);
+  });
+});
+
 describe('tripReadiness', () => {
-  it('counts the answered, accepted and flight steps', () => {
-    expect(tripReadiness({ rsvpStatus: 'pending', flightAssigned: false })).toEqual({
-      steps: [false, false, false],
-      score: 0,
-      counted: true,
-    });
-    expect(tripReadiness({ rsvpStatus: 'accepted', flightAssigned: true }).score).toBe(3);
+  const someone = { rsvpStatus: 'pending', dietaryConfirmed: false, flightAssigned: false } as const;
+
+  it('counts the accepted, dietary and flight steps, in that order', () => {
+    expect(tripReadiness(someone)).toEqual({ steps: [false, false, false], score: 0, counted: true });
+    expect(tripReadiness({ ...someone, rsvpStatus: 'accepted' }).steps).toEqual([true, false, false]);
+    expect(tripReadiness({ ...someone, dietaryConfirmed: true }).steps).toEqual([false, true, false]);
+    expect(tripReadiness({ ...someone, flightAssigned: true }).steps).toEqual([false, false, true]);
+    expect(tripReadiness({ rsvpStatus: 'accepted', dietaryConfirmed: true, flightAssigned: true }).score).toBe(3);
+  });
+
+  it('does not count an answer on its own: a pending person with a meal and a flight is 2 of 3', () => {
+    expect(tripReadiness({ rsvpStatus: 'pending', dietaryConfirmed: true, flightAssigned: true }).score).toBe(2);
+  });
+
+  it('is not ready without a meal choice even when accepted with a flight', () => {
+    expect(tripReadiness({ rsvpStatus: 'accepted', dietaryConfirmed: false, flightAssigned: true }).score).toBe(2);
   });
 
   it('does not count someone who declined', () => {
-    expect(tripReadiness({ rsvpStatus: 'declined', flightAssigned: true }).counted).toBe(false);
+    expect(tripReadiness({ ...someone, rsvpStatus: 'declined', flightAssigned: true }).counted).toBe(false);
   });
 });

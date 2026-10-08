@@ -6,6 +6,7 @@ import ErrorNotice from '@/components/ErrorNotice';
 import NudgeBanner from '@/components/planner/NudgeBanner';
 import RosterCards from '@/components/planner/RosterCards';
 import RosterTable from '@/components/planner/RosterTable';
+import { TRIP_READY_RULE } from '@/components/planner/rosterShared';
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/useMediaQuery';
 import { useUiStore } from '@/store/uiStore';
 import type { RosterRsvpFilter } from '@/store/uiStore';
@@ -160,15 +161,11 @@ export default function AttendeeRoster() {
 
       {helpOpen && (
         <p id="trip-ready-help" className="rounded-2xl border border-line bg-white px-4 py-3 text-sm text-body max-lg:order-4 lg:hidden">
-          Trip ready = answered RSVP · accepted · flight booked. Someone who declined is not counted.
+          {TRIP_READY_RULE}
         </p>
       )}
 
       <div className="max-lg:order-5">{wide ? <RosterTable {...list} /> : <RosterCards {...list} />}</div>
-
-      <p className="hidden text-[13px] text-muted lg:block">
-        Trip ready = answered RSVP · accepted · flight booked. Someone who declined is not counted.
-      </p>
     </section>
   );
 }

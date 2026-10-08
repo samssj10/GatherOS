@@ -1,6 +1,8 @@
+import { Fragment } from 'react';
 import { useDepartmentStats } from '@/api/attendees';
 import ErrorNotice from '@/components/ErrorNotice';
 import Skeleton from '@/components/Skeleton';
+import { teamRaceRows } from '@/utils/teamRace';
 
 const VISIBLE = 5;
 
@@ -8,10 +10,7 @@ const VISIBLE = 5;
 export default function TeamRace({ ownDepartment }: { ownDepartment: string }) {
   const { data, isPending, isError, refetch } = useDepartmentStats();
 
-  const ranked = (data ?? []).map((stat, index) => ({ ...stat, position: index + 1 }));
-  const top = ranked.slice(0, VISIBLE);
-  const own = ranked.find((stat) => stat.department === ownDepartment);
-  const rows = own && !top.some((stat) => stat.department === ownDepartment) ? [...top, own] : top;
+  const { rows, hidden } = teamRaceRows(data ?? [], ownDepartment, VISIBLE);
 
   return (
     <section
@@ -31,27 +30,47 @@ export default function TeamRace({ ownDepartment }: { ownDepartment: string }) {
         <Skeleton className="h-40" />
       ) : (
         <ol className="flex flex-col gap-3 lg:gap-3.5">
-          {rows.map((row) => {
+          {rows.map((row, index) => {
             const mine = row.department === ownDepartment;
+            // The teams between the top and this one are not shown, so say how many there are.
+            const gapBefore = mine && hidden > 0 && index === rows.length - 1;
             return (
-              <li key={row.department} className="flex items-center gap-2.5 lg:gap-3">
-                <span className="w-5.5 font-mono text-[13px] text-muted">{row.position}</span>
-                <div className="min-w-0 flex-1">
-                  <div className={`mb-1 flex justify-between text-sm lg:mb-1.5 lg:text-[15px] ${mine ? 'font-bold' : 'font-medium'}`}>
-                    <span>
-                      {row.department}
-                      {mine && <span className="sr-only"> (your team)</span>}
+              <Fragment key={row.department}>
+                {gapBefore && (
+                  <li className="flex items-center gap-3 py-0.5 text-xs text-muted">
+                    <span className="sr-only">
+                      {hidden} more {hidden === 1 ? 'team' : 'teams'} not shown
                     </span>
-                    <span className="font-mono">{row.pct}%</span>
+                    <span className="flex-1 border-t border-dotted border-field" aria-hidden="true" />
+                    <span aria-hidden="true">
+                      {hidden} more {hidden === 1 ? 'team' : 'teams'}
+                    </span>
+                    <span className="flex-1 border-t border-dotted border-field" aria-hidden="true" />
+                  </li>
+                )}
+                <li
+                  className={`flex items-center gap-2.5 lg:gap-3 ${
+                    mine ? '-mx-2.5 rounded-xl bg-brand-tint px-2.5 py-2' : ''
+                  }`}
+                >
+                  <span className="w-5.5 font-mono text-[13px] text-muted">{row.position}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className={`mb-1 flex justify-between text-sm lg:mb-1.5 lg:text-[15px] ${mine ? 'font-bold' : 'font-medium'}`}>
+                      <span>
+                        {row.department}
+                        {mine && <span className="font-medium text-brand-ink"> · your team</span>}
+                      </span>
+                      <span className="font-mono">{row.pct}%</span>
+                    </div>
+                    <div className={`h-2 overflow-hidden rounded ${mine ? 'bg-white' : 'bg-hairline'}`}>
+                      <div
+                        className={`h-full rounded ${mine ? 'bg-brand' : 'bg-ink-text'}`}
+                        style={{ width: `${row.pct}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 overflow-hidden rounded bg-hairline">
-                    <div
-                      className={`h-full rounded ${mine ? 'bg-brand' : 'bg-ink-text'}`}
-                      style={{ width: `${row.pct}%` }}
-                    />
-                  </div>
-                </div>
-              </li>
+                </li>
+              </Fragment>
             );
           })}
         </ol>

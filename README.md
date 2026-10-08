@@ -70,12 +70,12 @@
 - **Room check-in code.** While a session is live, its card shows a lime **Live · Code** link that opens a full-screen display for the room: a QR code, a six-character code under it, a countdown to the next code and a live "checked in n of N" bar. The code changes every minute and only works while the session is live; before or after the session the screen says so. **Preview room screens**, in the itinerary header, steps through every session with a sample code (`TEST42`) and a SAMPLE QR so the projector can be tested before the event; it makes no check-in requests and cannot stamp anyone.
 - **Budget breakdown.** A stacked bar by category (meals, activities, workshops, keynotes) with an "on track", "close to the limit" or "over budget" status.
 - **RSVP overview.** Accepted, pending and declined totals with a Half House marker.
-- **Virtualized roster.** All 2,500 attendees, searchable and filterable by response, with only about 20 rows in the DOM at any time. A **Trip ready** meter shows who has answered, accepted and booked a flight, and **Nudge** reminds pending attendees one at a time or all at once.
+- **Virtualized roster.** All 2,500 attendees, searchable and filterable by response, with only about 20 rows in the DOM at any time. A **Trip ready** meter shows who has accepted, set a dietary preference and booked a flight (an info button in the column header explains it; someone who declined is not counted), and **Nudge** reminds pending attendees one at a time or all at once.
 
 ### For attendees (phone and desktop)
 
 - **Home.** Level, rank and XP at a glance. The RSVP is a quest ("Are you in?") with an optimistic UI that responds instantly and rolls back on failure. A pre-trip checklist and a "first stop" teaser follow. On desktop the page becomes two columns with a "Day 1 at a glance" card.
-- **Journey.** On a phone: day tabs and a stop-by-stop timeline. On desktop: a stamp progress strip and one column per day; a trip longer than three days is paged three days at a time, with the same jump bar and side strips as the planner's board, and opens on the page with the live or next session. Check-in opens when a session starts and closes when it ends. While one is live, **scan the QR code** on the room screen with your phone's camera, or **type the six-character code** (on desktop, or when the camera is unavailable), to collect its stamp and XP.
+- **Journey.** On a phone: day tabs and a stop-by-stop timeline. On desktop: a stamp progress strip and one column per day; a trip longer than three days is paged three days at a time, with the same jump bar and side strips as the planner's board, and opens on the page with the live or next session. Check-in opens when a session starts and closes when it ends. While one is live, **scan the QR code** on the room screen with your phone's camera, or **type the six-character code** (on desktop, or when the camera is unavailable), to collect its stamp and XP. Anyone who has declined or not yet answered sees an **RSVP to check in** button there instead.
 - **Passport.** Your stamps, six badges (Early Responder, Fuelled Up, Jet Set, Front Row, Sea Legs, Full House) and a **team race** showing the share of each department that is going. On desktop it opens with a hero of XP, stamps and badges.
 - **Dietary quest.** Four large options, saved instantly, with a "Meals on this trip" list.
 - Touch targets of at least 44px. A four-tab bottom navigation on phones and a top navigation bar, with your level and XP, on desktop.
@@ -276,9 +276,9 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 
 ## Testing and CI
 
-**Unit tests (Vitest, 217 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
+**Unit tests (Vitest, 239 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
 
-**End-to-end (Playwright).** Nine specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
+**End-to-end (Playwright).** Twelve specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
 
 1. Inject a signed planner cookie to bypass the login screen.
 2. Intercept `POST /api/ai/generate-schedule` with `page.route()` and return a hardcoded valid response.
@@ -295,6 +295,12 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 [`e2e/planner-mobile.spec.ts`](e2e/planner-mobile.spec.ts) covers the planner on a phone and a tablet: the top bar and tab bar, a dashboard and roster with nothing sticking out sideways or overlapping, the board one day at a time (including a resize and a touch drag), and the roster cards with search, filters and Nudge.
 
 [`e2e/room-preview.spec.ts`](e2e/room-preview.spec.ts) checks that the Code link appears only on the live session, that a session which is not live keeps its "Not live yet" notice, and that the sample room screens step through the sessions, show `TEST42` and never ask the server for a real code.
+
+[`e2e/attendee-home.spec.ts`](e2e/attendee-home.spec.ts) checks Home on a phone and a desktop: the RSVP card first until the person accepts, quest XP drawn as earned, open or waiting, the per-screen subtitles and the quest links.
+
+[`e2e/journey-rsvp.spec.ts`](e2e/journey-rsvp.spec.ts) checks the Journey: "RSVP to check in" instead of the code for anyone not going, the light progress card, grey stamp chips and the code field's hint colour.
+
+[`e2e/passport-dietary-focus.spec.ts`](e2e/passport-dietary-focus.spec.ts) checks the Passport (badge wording, EARNED only, the team race gap), the Dietary helper line and layout, and that a click or tap never leaves a focus ring on the navigation.
 
 [`e2e/sign-out-icon.spec.ts`](e2e/sign-out-icon.spec.ts) checks that every sign-out control (planner sidebar, planner phone menu, both attendee bars) uses the design's arrow-leaving-a-bracket icon.
 

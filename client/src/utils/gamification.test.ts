@@ -6,6 +6,7 @@ import {
   buildBadges,
   buildQuests,
   computeXp,
+  stampsHint,
   levelInfo,
   sortSessions,
   validStamps,
@@ -115,6 +116,55 @@ describe('buildQuests', () => {
     ]);
   });
 
+  describe('how each quest stands, which decides how its XP is drawn', () => {
+    const states = (a: Attendee) => Object.fromEntries(buildQuests(a, sessions).map((quest) => [quest.id, quest.state]));
+
+    it('is "todo" for an open quest, "done" once earned, and "waiting" for the first check-in until the RSVP', () => {
+      expect(states(attendee({ rsvpStatus: 'pending', flightAssigned: true }))).toEqual({
+        rsvp: 'todo',
+        dietary: 'todo',
+        flight: 'done',
+        checkin: 'waiting',
+      });
+    });
+
+    it('opens the first check-in once the attendee is going', () => {
+      expect(states(attendee({ rsvpStatus: 'accepted', dietaryConfirmed: true })).checkin).toBe('todo');
+      expect(states(attendee({ rsvpStatus: 'accepted', dietaryConfirmed: true })).dietary).toBe('done');
+    });
+
+    it('treats a flight that is not booked as waiting on the travel team, not as something to do', () => {
+      expect(states(attendee({ flightAssigned: false })).flight).toBe('waiting');
+    });
+
+    it('is never "done" for XP that is not earned', () => {
+      const quests = buildQuests(attendee({ rsvpStatus: 'declined' }), sessions);
+      for (const quest of quests) expect(quest.done).toBe(quest.state === 'done');
+    });
+  });
+
+  describe('the lines under each quest', () => {
+    const quest = (a: Attendee, id: string) => buildQuests(a, sessions).find((entry) => entry.id === id)!;
+
+    it('tells the RSVP where to answer: at the top on a phone, on the left on a wide screen', () => {
+      const rsvp = quest(attendee({ rsvpStatus: 'pending' }), 'rsvp');
+      expect(rsvp.sub).toBe('Answer at the top of this page');
+      expect(rsvp.subWide).toBe('Answer on the left');
+      expect(quest(attendee({ rsvpStatus: 'accepted' }), 'rsvp').sub).toBe('Done');
+    });
+
+    it('points the dietary quest at Dietary until a choice is made, then names the choice', () => {
+      expect(quest(attendee(), 'dietary').sub).toBe('Choose in Dietary');
+      expect(quest(attendee({ dietaryConfirmed: true, dietaryPreference: 'vegan' }), 'dietary').sub).toBe('Vegan');
+    });
+
+    it('sends an open quest to where it is done', () => {
+      expect(quest(attendee(), 'rsvp').to).toBe('#rsvp');
+      expect(quest(attendee(), 'dietary').to).toBe('/attendee/preferences');
+      expect(quest(attendee(), 'checkin').to).toBe('/attendee/schedule');
+    });
+  });
+
   it('points the check-in quest at the first session of the trip', () => {
     const quest = buildQuests(attendee(), [...sessions].reverse()).find((entry) => entry.id === 'checkin');
     expect(quest?.label).toBe('Check in at keynote-1');
@@ -130,7 +180,7 @@ describe('buildQuests', () => {
     const going = attendee({ rsvpStatus: 'accepted' });
 
     it('says when check-in opens while the session is upcoming', () => {
-      expect(hint(going, 'upcoming')).toBe('Opens at 09:00 on Day 1');
+      expect(hint(going, 'upcoming')).toBe('Opens 09:00 on Day 1');
     });
 
     it('says it is happening now while the session is live', () => {
@@ -218,5 +268,51 @@ describe('badgeProgress', () => {
 
   it('has nothing to report for a session that counts toward no badge', () => {
     expect(badgeProgress(ordered[1]!, ordered, new Set())).toEqual([]);
+  });
+});
+
+describe('badge wording', () => {
+  const how = (a: Attendee, id: string) => buildBadges(a, sessions).find((badge) => badge.id === id)?.how;
+
+  it('tells a locked badge what to do', () => {
+    const nothing = attendee();
+    expect(how(nothing, 'early')).toBe('Confirm your RSVP');
+    expect(how(nothing, 'fuelled')).toBe('Set your dietary preference');
+    expect(how(nothing, 'jetset')).toBe('Book your flight');
+    expect(how(nothing, 'frontrow')).toBe('Stamp every keynote');
+    expect(how(nothing, 'sealegs')).toBe('Stamp every activity');
+    expect(how(nothing, 'fullhouse')).toBe('Collect all 4 stamps');
+  });
+
+  it('says what an earned badge was earned for, in the past tense', () => {
+    const done = attendee({ rsvpStatus: 'accepted', dietaryConfirmed: true, flightAssigned: true });
+    expect(how(done, 'early')).toBe('Confirmed your RSVP');
+    expect(how(done, 'fuelled')).toBe('Shared your dietary preference');
+    expect(how(done, 'jetset')).toBe('Booked your flight');
+  });
+
+  it('switches a stamp badge to the past tense once every stamp is in', () => {
+    const everyone = attendee({ rsvpStatus: 'accepted', stamps: ['keynote-1', 'lunch', 'sailing', 'keynote-2'] });
+    expect(how(everyone, 'frontrow')).toBe('Stamped every keynote');
+    expect(how(everyone, 'sealegs')).toBe('Stamped every activity');
+    expect(how(everyone, 'fullhouse')).toBe('Collected all 4 stamps');
+  });
+});
+
+describe('stampsHint', () => {
+  it('says when the trip starts while there are no stamps', () => {
+    expect(stampsHint(0, 7, 1)).toBe('Starts on Day 1');
+  });
+
+  it('counts what is left once stamps start coming in', () => {
+    expect(stampsHint(2, 7, 1)).toBe('5 to go');
+  });
+
+  it('says when everything is collected', () => {
+    expect(stampsHint(7, 7, 1)).toBe('All collected');
+  });
+
+  it('falls back when there are no sessions to name a day', () => {
+    expect(stampsHint(0, 0, undefined)).toBe('Check in to collect');
   });
 });

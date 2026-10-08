@@ -1,10 +1,13 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useRef } from 'react';
+import { Info } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import Skeleton from '@/components/Skeleton';
 import {
   RSVP_STYLES,
   avatarTint,
+  TRIP_READY_RULE,
   dietaryLabel,
+  hasDietaryChoice,
   tripReadiness,
 } from '@/components/planner/rosterShared';
 import type { RosterListProps } from '@/components/planner/rosterShared';
@@ -54,7 +57,7 @@ function RosterRow({
           {attendee.rsvpStatus}
         </span>
       </div>
-      <div role="cell" className="truncate text-sm text-body">
+      <div role="cell" className={`truncate text-sm ${hasDietaryChoice(attendee) ? 'text-body' : 'text-muted'}`}>
         {dietaryLabel(attendee)}
       </div>
       <div role="cell" className="flex items-center gap-2.5">
@@ -97,6 +100,53 @@ function RosterRow({
   );
 }
 
+/** The "Trip ready" heading with an info button that explains what counts. Closes on Escape or a click elsewhere. */
+function TripReadyHeading() {
+  const [open, setOpen] = useState(false);
+  const wrapper = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (!wrapper.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [open]);
+
+  return (
+    <span ref={wrapper} className="relative inline-flex items-center gap-1.5">
+      Trip ready
+      <button
+        type="button"
+        aria-label="What does Trip ready mean?"
+        aria-expanded={open}
+        aria-controls="trip-ready-help"
+        onClick={() => setOpen((current) => !current)}
+        className="-m-2 flex size-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-wash hover:text-ink"
+      >
+        <Info className="size-4" strokeWidth={1.9} aria-hidden="true" />
+      </button>
+      {open && (
+        <span
+          id="trip-ready-help"
+          role="status"
+          className="absolute top-full right-0 z-20 mt-2 w-72 rounded-2xl border border-line bg-white px-4 py-3 text-sm leading-snug font-normal tracking-normal text-body normal-case shadow-lg"
+        >
+          {TRIP_READY_RULE}
+        </span>
+      )}
+    </span>
+  );
+}
+
 /** The roster as a table, for a wide screen. Only the rows in view (plus a little overscan) exist in the DOM. */
 export default function RosterTable({ rows, isPending, onNudge, nudgingId }: RosterListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -123,7 +173,7 @@ export default function RosterTable({ rows, isPending, onNudge, nudgingId }: Ros
               role="columnheader"
               className={`text-xs font-semibold uppercase tracking-[0.06em] text-muted ${index === 5 ? 'text-right' : ''}`}
             >
-              {heading}
+              {heading === 'Trip ready' ? <TripReadyHeading /> : heading}
             </div>
           ))}
         </div>

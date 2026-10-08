@@ -19,7 +19,7 @@ const AVATAR_TINTS = [
 export const avatarTint = (id: string) =>
   AVATAR_TINTS[Number.parseInt(id.slice(4), 10) % AVATAR_TINTS.length] ?? AVATAR_TINTS[0];
 
-export { dietaryLabel, tripReadiness } from '@/utils/roster';
+export { TRIP_READY_RULE, dietaryLabel, hasDietaryChoice, tripReadiness } from '@/utils/roster';
 
 /** Props both roster layouts take. */
 export interface RosterListProps {

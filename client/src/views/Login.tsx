@@ -39,23 +39,37 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   },
 ];
 
+/** Seven stops: the first three stamped in the category colours, the rest still to come. Purely decorative. */
+function StampStrip({ size, className = '' }: { size: 'phone' | 'wide'; className?: string }) {
+  const circle = size === 'phone' ? 'size-6.5' : 'size-8.5';
+  const tick = size === 'phone' ? 12 : 16;
+  return (
+    <div data-testid="stamp-strip" className={`inline-flex rounded-full ${className}`} aria-hidden="true">
+      {['bg-brand', 'bg-blue', 'bg-orange'].map((color) => (
+        <span key={color} className={`flex items-center justify-center rounded-full ${circle} ${color}`}>
+          <svg
+            width={tick}
+            height={tick}
+            viewBox="0 0 24 24"
+            fill="none"
+            className="stroke-white"
+            strokeWidth="2.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M5 12.5 10 17 19 7" />
+          </svg>
+        </span>
+      ))}
+      {[0, 1, 2, 3].map((index) => (
+        <span key={index} className={`rounded-full border-2 border-dashed border-body ${circle}`} />
+      ))}
+    </div>
+  );
+}
+
 /** Decorative preview on the brand panel. Numbers are illustrative, not live data. */
 function BrandPreview() {
-  const check = (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      className="stroke-white"
-      strokeWidth="2.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12.5 10 17 19 7" />
-    </svg>
-  );
-
   return (
     <div className="relative h-75 max-w-130" aria-hidden="true">
       <div className="absolute top-0 left-0 flex w-82 -rotate-3 flex-col gap-2.5 rounded-[20px] border border-ink-line bg-ink-raised p-4.5">
@@ -93,16 +107,7 @@ function BrandPreview() {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 flex gap-2.5 rounded-full border border-ink-line bg-ink-raised px-3.5 py-2.5">
-        {['bg-brand', 'bg-blue', 'bg-orange'].map((color) => (
-          <span key={color} className={`flex size-8.5 items-center justify-center rounded-full ${color}`}>
-            {check}
-          </span>
-        ))}
-        {[0, 1, 2, 3].map((index) => (
-          <span key={index} className="size-8.5 rounded-full border-2 border-dashed border-body" />
-        ))}
-      </div>
+      <StampStrip size="wide" className="absolute bottom-0 left-0 gap-2.5 border border-ink-line bg-ink-raised px-3.5 py-2.5" />
     </div>
   );
 }
@@ -166,11 +171,15 @@ export default function Login() {
         className="flex min-w-0 flex-[999_1_480px] items-center justify-center px-6 py-12"
       >
         <div className="flex w-full max-w-110 flex-col gap-7">
-          <div className="flex items-center gap-3 lg:hidden">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-brand font-display text-[21px] font-extrabold text-white">
-              G
-            </span>
-            <span className="font-display text-[22px] font-bold">GatherOS</span>
+          {/* On a phone the brand panel is not shown, so the logo and the stamp strip stand in for it. Decorative. */}
+          <div className="flex flex-col items-start gap-3.5 lg:hidden" aria-hidden="true">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-brand font-display text-[21px] font-extrabold text-white">
+                G
+              </span>
+              <span className="font-display text-[22px] font-bold">GatherOS</span>
+            </div>
+            <StampStrip size="phone" className="gap-1.75 bg-ink px-3.75 py-2" />
           </div>
 
           <div>
