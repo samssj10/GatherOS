@@ -20,6 +20,15 @@ export function usePlannerSchedule() {
   });
 }
 
+/** Which saved sessions are live right now, by id. Check-in opens and closes by the clock, so it is polled. */
+export function useSessionStatuses() {
+  return useQuery({
+    queryKey: scheduleKeys.status,
+    queryFn: ({ signal }) => apiFetch<Record<string, AttendeeScheduleDTO['checkInStatus']>>('/schedule/status', { signal }),
+    refetchInterval: 30_000,
+  });
+}
+
 export function useBudgetSummary() {
   return useQuery({
     queryKey: scheduleKeys.budget,
@@ -97,6 +106,7 @@ export function useSaveSchedule() {
       apiFetch<ScheduleItem[]>('/schedule', { method: 'PUT', body: { items } }),
     onSuccess: (saved) => {
       queryClient.setQueryData(scheduleKeys.planner, saved);
+      void queryClient.invalidateQueries({ queryKey: scheduleKeys.status });
       queryClient.setQueryData<ScheduleItem[] | null>(scheduleKeys.draft, null);
       void queryClient.invalidateQueries({ queryKey: scheduleKeys.budget });
       void queryClient.invalidateQueries({ queryKey: scheduleKeys.mine });
@@ -153,7 +163,10 @@ export function useReorderDay() {
 
     onSuccess: (saved, { day, quiet }, context) => {
       // The server computed the times itself, so its answer is the source of truth.
-      if (saved) queryClient.setQueryData(scheduleKeys.planner, saved);
+      if (saved) {
+        queryClient.setQueryData(scheduleKeys.planner, saved);
+        void queryClient.invalidateQueries({ queryKey: scheduleKeys.status });
+      }
       if (quiet) return;
       useUiStore
         .getState()
@@ -197,7 +210,10 @@ export function useRestoreTiming() {
     },
 
     onSuccess: (saved) => {
-      if (saved) queryClient.setQueryData(scheduleKeys.planner, saved);
+      if (saved) {
+        queryClient.setQueryData(scheduleKeys.planner, saved);
+        void queryClient.invalidateQueries({ queryKey: scheduleKeys.status });
+      }
       useUiStore.getState().addToast('success', 'Move undone.');
     },
 

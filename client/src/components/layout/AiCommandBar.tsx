@@ -1,5 +1,5 @@
 import { Loader2, SlidersHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useAttendeeSummary } from '@/api/attendees';
 import { useBudgetSummary, useGenerateSchedule } from '@/api/schedule';
@@ -17,6 +17,9 @@ export default function AiCommandBar() {
   const budget = useBudgetSummary().data?.budget;
 
   const wideEnough = useMediaQuery('(min-width: 40rem)');
+  // On a phone the bar is one button until it is tapped; from sm up the form is always there.
+  const [open, setOpen] = useState(false);
+  const promptRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState('');
   const [showOptions, setShowOptions] = useState(false);
   const [city, setCity] = useState('');
@@ -28,18 +31,27 @@ export default function AiCommandBar() {
   const pending = generate.isPending;
   const resolved = resolveDays(prompt, manualDays);
 
+  const expanded = wideEnough || open;
+  useEffect(() => {
+    if (open) promptRef.current?.focus();
+  }, [open]);
+
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (pending) return;
 
     const requested = Number.parseInt(attendees, 10);
-    generate.mutate({
-      prompt: prompt.trim(),
-      city: city.trim() || undefined,
-      days: resolved.days,
-      attendeeCount: Number.isFinite(requested) && requested > 0 ? requested : defaultAttendees,
-      budget,
-    });
+    generate.mutate(
+      {
+        prompt: prompt.trim(),
+        city: city.trim() || undefined,
+        days: resolved.days,
+        attendeeCount: Number.isFinite(requested) && requested > 0 ? requested : defaultAttendees,
+        budget,
+      },
+      // Once a draft has been made the board takes over, so the bar folds back up on a phone.
+      { onSuccess: () => setOpen(false) },
+    );
   };
 
   // The bar sticks to the top only on a wide screen: on a phone it would cover a quarter of the page.
@@ -51,6 +63,23 @@ export default function AiCommandBar() {
         aria-busy={pending}
         onSubmit={handleSubmit}
       >
+        {!expanded && (
+          <div className="py-4">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-expanded="false"
+              aria-controls="ai-form"
+              className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[14px] border border-field bg-white px-4 text-[15px] font-semibold text-ink transition-colors hover:bg-wash"
+            >
+              <BurstIcon className="size-4.5 text-brand" />
+              Generate a draft with AI
+            </button>
+          </div>
+        )}
+
+        {expanded && (
+        <div id="ai-form">
         <div className="flex flex-wrap items-center gap-2.5 py-4">
           <label htmlFor="ai-prompt" className="sr-only">
             Describe the offsite you want to plan
@@ -59,6 +88,7 @@ export default function AiCommandBar() {
             <BurstIcon className="size-4.5 shrink-0 text-brand" />
             <input
               id="ai-prompt"
+              ref={promptRef}
               type="text"
               required
               minLength={3}
@@ -154,6 +184,8 @@ export default function AiCommandBar() {
               />
             </div>
           </div>
+        )}
+        </div>
         )}
       </form>
     </header>

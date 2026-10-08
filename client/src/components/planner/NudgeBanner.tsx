@@ -18,13 +18,13 @@ export default function NudgeBanner() {
       aria-label="Reminders"
       className="flex flex-wrap items-center gap-x-6 gap-y-4 rounded-[20px] bg-ink px-5.5 py-4.5 text-canvas"
     >
-      <span className="flex size-11 flex-none items-center justify-center rounded-xl bg-lime text-ink">
+      <span className="flex size-11 flex-none max-sm:hidden items-center justify-center rounded-xl bg-lime text-ink">
         <Trophy className="size-5.5" strokeWidth={1.9} aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-[1_1_320px]">
         <p className="font-display text-[19px] font-bold">
           {gap > 0
-            ? `${formatNumber(gap)} ${gap === 1 ? 'yes' : 'yeses'} from Half House`
+            ? `${formatNumber(gap)} more ${gap === 1 ? 'yes' : 'yeses'} to fill half the house`
             : 'Half House reached'}
         </p>
         <p className="mt-0.5 text-sm text-ink-text-2">
@@ -36,7 +36,7 @@ export default function NudgeBanner() {
         type="button"
         onClick={() => nudge.mutate(undefined)}
         disabled={nudge.isPending}
-        className="inline-flex min-h-11.5 items-center gap-2 rounded-xl bg-lime px-5 text-[15px] font-semibold text-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+        className="inline-flex min-h-11.5 items-center gap-2 rounded-xl max-sm:w-full max-sm:justify-center bg-lime px-5 text-[15px] font-semibold text-ink transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         <Send className="size-4.5" strokeWidth={1.9} aria-hidden="true" />
         {nudge.isPending ? 'Nudging…' : 'Nudge all pending'}

@@ -75,4 +75,20 @@ describe('the event clock', () => {
       expect(now.getTime()).toBeLessThan(local(15, 30).getTime());
     }
   });
+
+  it('lists every saved session as upcoming, live or ended on the event clock', async () => {
+    const { listSessionStatuses, listSchedule } = await loadClock({});
+    const sessions = listSchedule();
+    const keynote = sessions.find((item) => item.day === 1 && item.startTime === '09:00')!;
+    const lunch = sessions.find((item) => item.day === 1 && item.startTime === '12:15')!;
+
+    const morning = listSessionStatuses(local(9, 30));
+    expect(Object.keys(morning).sort()).toEqual(sessions.map((item) => item.id).sort());
+    expect(morning[keynote.id]).toBe('live');
+    expect(morning[lunch.id]).toBe('upcoming');
+
+    const afternoon = listSessionStatuses(local(14, 0));
+    expect(afternoon[keynote.id]).toBe('ended');
+    expect(afternoon[lunch.id]).toBe('ended');
+  });
 });

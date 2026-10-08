@@ -2,9 +2,9 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef } from 'react';
 import Skeleton from '@/components/Skeleton';
 import {
-  DIETARY_LABELS,
   RSVP_STYLES,
   avatarTint,
+  dietaryLabel,
   tripReadiness,
 } from '@/components/planner/rosterShared';
 import type { RosterListProps } from '@/components/planner/rosterShared';
@@ -26,7 +26,7 @@ function RosterRow({
   onNudge: (id: string) => void;
   nudging: boolean;
 }) {
-  const { steps, score } = tripReadiness(attendee);
+  const { steps, score, counted } = tripReadiness(attendee);
   const alreadyNudged = attendee.nudgedAt !== null;
 
   return (
@@ -55,18 +55,27 @@ function RosterRow({
         </span>
       </div>
       <div role="cell" className="truncate text-sm text-body">
-        {DIETARY_LABELS[attendee.dietaryPreference]}
+        {dietaryLabel(attendee)}
       </div>
       <div role="cell" className="flex items-center gap-2.5">
-        <span className="flex gap-1" aria-hidden="true">
-          {steps.map((done, index) => (
-            <span key={index} className={`h-2 w-5.5 rounded ${done ? 'bg-ink' : 'bg-line'}`} />
-          ))}
-        </span>
-        <span className="font-mono text-xs text-body">
-          <span className="sr-only">Trip ready: </span>
-          {score}/3
-        </span>
+        {counted ? (
+          <>
+            <span className="flex gap-1" aria-hidden="true">
+              {steps.map((done, index) => (
+                <span key={index} className={`h-2 w-5.5 rounded ${done ? 'bg-ink' : 'bg-line'}`} />
+              ))}
+            </span>
+            <span className="font-mono text-xs text-body">
+              <span className="sr-only">Trip ready: </span>
+              {score}/3
+            </span>
+          </>
+        ) : (
+          <span className="text-sm text-muted">
+            <span aria-hidden="true">—</span>
+            <span className="sr-only">Trip ready: not counted</span>
+          </span>
+        )}
       </div>
       <div role="cell" className="text-right">
         {attendee.rsvpStatus === 'pending' && (

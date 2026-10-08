@@ -105,15 +105,15 @@ describe('hostRank', () => {
   it.each([
     [0, 'Scout'],
     [1, 'Pathfinder'],
-    [2, 'Trail Builder'],
-    [3, 'Trailblazer'],
+    [2, 'Navigator'],
+    [3, 'Captain'],
     [4, 'Summit Host'],
   ])('%i milestones is %s', (done, name) => {
     expect(rankFor(done).name).toBe(name);
   });
 
   it('names the next rank and when it unlocks, and has none at the top', () => {
-    expect(rankFor(2).next).toEqual({ name: 'Trailblazer', unlocksAt: 3 });
+    expect(rankFor(2).next).toEqual({ name: 'Captain', unlocksAt: 3 });
     expect(rankFor(4).next).toBeNull();
   });
 });

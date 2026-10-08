@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { plannerSession, sessionCookie } from './helpers/session';
 
 // The planner on a phone and a tablet: a slim top bar and a bottom tab bar replace the sidebar, which
@@ -37,9 +37,10 @@ for (const [name, size] of [['phone', PHONE], ['tablet', TABLET]] as const) {
       await expect(page.getByRole('complementary')).toHaveCount(0);
     });
 
-    test('moves between the pages with the tab bar and shows the pending count', async ({ page }) => {
+    test('moves between the pages with the tab bar, which carries no count badge', async ({ page }) => {
       await open(page);
-      await expect(tabBar(page).getByText('900 pending responses')).toBeAttached();
+      await expect(tabBar(page).getByText(/pending responses/)).toHaveCount(0);
+      await expect(tabBar(page).getByRole('link', { name: 'Attendees', exact: true })).toBeVisible();
       await tabBar(page).getByRole('link', { name: /^Attendees/ }).click();
       await expect(page).toHaveURL(/\/planner\/attendees$/);
       await expect(page.getByRole('heading', { level: 1, name: 'Attendees' })).toBeVisible();
@@ -48,9 +49,14 @@ for (const [name, size] of [['phone', PHONE], ['tablet', TABLET]] as const) {
       await expect(page.getByRole('heading', { level: 1, name: 'Mission control' })).toBeVisible();
     });
 
-    test('shows the host rank in the page, on the dashboard only', async ({ page }) => {
+    test('shows the host rank in the page (tablet) or the hero (phone), on the dashboard only', async ({ page }) => {
       await open(page);
-      await expect(hostRank(page)).toBeVisible();
+      if (name === 'phone') {
+        await expect(hostRank(page)).toHaveCount(0);
+        await expect(page.locator('section[aria-labelledby="readiness-title"]')).toContainText(/Navigator · 2 of 4 milestones/);
+      } else {
+        await expect(hostRank(page)).toBeVisible();
+      }
       await tabBar(page).getByRole('link', { name: /^Attendees/ }).click();
       await expect(page.getByRole('heading', { level: 1, name: 'Attendees' })).toBeVisible();
       await expect(hostRank(page)).toHaveCount(0);
@@ -182,17 +188,31 @@ for (const [name, size, columns] of [['phone', PHONE, 1], ['tablet', TABLET, 3],
 test.describe('the AI bar and page padding on a phone', () => {
   test.use({ viewport: PHONE, hasTouch: true, isMobile: true });
 
+  test('is one button until it is tapped', async ({ page }) => {
+    await open(page);
+    const opener = page.getByRole('button', { name: 'Generate a draft with AI' });
+    await expect(opener).toBeVisible();
+    await expect(opener).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByLabel('Describe the offsite you want to plan')).toHaveCount(0);
+    expect((await opener.boundingBox())?.width ?? 0).toBeGreaterThan(300);
+
+    await opener.tap();
+    await expect(page.getByLabel('Describe the offsite you want to plan')).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Generate draft' })).toBeVisible();
+    await expect(opener).toHaveCount(0);
+  });
+
   test('scrolls away with the page instead of covering it', async ({ page }) => {
     await open(page);
-    const position = await page.locator('header').filter({ has: page.getByRole('search') }).evaluate((el) => getComputedStyle(el).position);
-    expect(position).not.toBe('sticky');
+    const bar = page.locator('header').filter({ has: page.getByRole('search') });
+    expect(await bar.evaluate((el) => getComputedStyle(el).position)).not.toBe('sticky');
     await page.evaluate(() => window.scrollTo(0, 600));
-    const top = await page.locator('header').filter({ has: page.getByRole('search') }).evaluate((el) => el.getBoundingClientRect().bottom);
-    expect(top).toBeLessThan(0);
+    expect(await bar.evaluate((el) => el.getBoundingClientRect().bottom)).toBeLessThan(0);
   });
 
   test('stacks its options one to a row, each as wide as the screen allows', async ({ page }) => {
     await open(page);
+    await page.getByRole('button', { name: 'Generate a draft with AI' }).tap();
     await page.getByRole('button', { name: 'Generation options' }).click();
     const widths = await page.locator('#ai-options input, #ai-options select').evaluateAll((all) => all.map((el) => Math.round(el.getBoundingClientRect().width)));
     expect(widths).toHaveLength(3);
@@ -202,10 +222,27 @@ test.describe('the AI bar and page padding on a phone', () => {
 
   test('uses a short prompt hint that fits, and a Generate button that fills the row', async ({ page }) => {
     await open(page);
+    await page.getByRole('button', { name: 'Generate a draft with AI' }).tap();
     const placeholder = await page.getByLabel('Describe the offsite you want to plan').getAttribute('placeholder');
     expect(placeholder).toBe('Describe your offsite, e.g. 3 days in Lisbon');
     const generate = await page.getByRole('button', { name: 'Generate draft' }).boundingBox();
     expect(generate?.width ?? 0).toBeGreaterThan(200);
+  });
+
+  test('folds back to one button once a draft has been made', async ({ page }) => {
+    await openDraft(page, 2);
+    await expect(page.getByRole('button', { name: 'Generate a draft with AI' })).toBeVisible();
+    await expect(page.getByLabel('Describe the offsite you want to plan')).toHaveCount(0);
+  });
+
+  test('leaves out the subtitle and the Review itinerary button, and keeps one Nudge button', async ({ page }) => {
+    await open(page);
+    await expect(page.getByText('Budget, responses and the itinerary at a glance.')).toBeHidden();
+    await expect(page.getByRole('link', { name: 'Review itinerary' })).toBeHidden();
+    await expect(page.getByRole('link', { name: /^Nudge .* pending/ })).toBeVisible();
+    const ring = await page.locator('section[aria-labelledby="readiness-title"] svg').first().boundingBox();
+    expect(ring?.width ?? 0).toBeLessThan(70);
+    expect(await fitsAcross(page)).toBe(true);
   });
 
   test('keeps a 16px margin at the sides of the page', async ({ page }) => {
@@ -258,6 +295,11 @@ async function openDraft(page: Page, days: number) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(draftFor(days)) }),
   );
   await page.goto('/planner');
+  // On a phone the bar is one button until it is tapped.
+  const opener = page.getByRole('button', { name: 'Generate a draft with AI' });
+  const prompt = page.getByLabel('Describe the offsite you want to plan');
+  await expect(opener.or(prompt)).toBeVisible();
+  if (await opener.isVisible()) await opener.click();
   await page.getByLabel('Describe the offsite you want to plan').fill(`${days}-day retreat in Lisbon`);
   await page.getByRole('button', { name: 'Generate draft' }).click();
   await expect(page.getByRole('navigation', { name: 'Jump to day' })).toBeVisible();
@@ -528,5 +570,74 @@ test.describe('the roster on a wide screen', () => {
     await expect(page.getByRole('list', { name: 'Attendee roster' })).toHaveCount(0);
     await expect(page.getByTestId('roster-viewport')).toBeVisible();
     expect(await rosterCards(page).count()).toBeLessThan(40);
+  });
+});
+
+// ---- the roster page in the redesign: order, one row of filters, and plain wording ----
+
+for (const [name, size] of [['phone', PHONE], ['tablet', TABLET]] as const) {
+  test.describe(`the roster page on a ${name}, as designed`, () => {
+    test.use({ viewport: size, hasTouch: true, isMobile: true });
+
+    test('reads title, reminder, search, filters, then the list', async ({ page }) => {
+      await openRoster(page);
+      const top = async (locator: Locator) => (await locator.boundingBox())?.y ?? Number.NaN;
+      const title = await top(page.getByRole('heading', { name: 'Attendees' }));
+      const reminder = await top(page.getByRole('region', { name: 'Reminders' }));
+      const search = await top(page.getByLabel('Search attendees by name, email or department'));
+      const filters = await top(page.getByRole('group', { name: 'Filter by response' }));
+      const list = await top(page.getByRole('list', { name: 'Attendee roster' }));
+      expect([title, reminder, search, filters, list]).toEqual([title, reminder, search, filters, list].sort((a, b) => a - b));
+      expect(new Set([title, reminder, search, filters, list]).size).toBe(5);
+    });
+
+    test('keeps the filters in one row that scrolls sideways', async ({ page }) => {
+      await openRoster(page);
+      const chips = page.getByRole('group', { name: 'Filter by response' }).getByRole('button');
+      await expect(chips).toHaveCount(4);
+      const tops = await chips.evaluateAll((all) => all.map((chip) => Math.round(chip.getBoundingClientRect().top)));
+      expect(new Set(tops).size).toBe(1);
+      expect(await fitsAcross(page)).toBe(true);
+    });
+
+    test('explains "trip ready" on request', async ({ page }) => {
+      await openRoster(page);
+      const help = page.getByRole('button', { name: /What.s trip ready/ });
+      await expect(help).toHaveAttribute('aria-expanded', 'false');
+      await help.tap();
+      await expect(help).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator('#trip-ready-help')).toBeVisible();
+      await help.tap();
+      await expect(page.locator('#trip-ready-help')).toHaveCount(0);
+    });
+
+    test('says "not counted" for a decline and never "None" for a meal', async ({ page }) => {
+      await openRoster(page);
+      await expect(showing(page)).toHaveText('Showing all 2,500 attendees');
+      await page.getByRole('button', { name: /^Declined/ }).click();
+      await expect(showing(page)).toContainText('of 2,500 attendees');
+      const texts = await rosterCards(page).evaluateAll((cards) => cards.map((card) => card.textContent ?? ''));
+      expect(texts.length).toBeGreaterThan(0);
+      for (const text of texts) {
+        expect(text).toContain('not counted');
+        expect(text).not.toContain('/3');
+        expect(text).not.toMatch(/Dietary: None/);
+      }
+    });
+  });
+}
+
+test.describe('the roster table wording on a wide screen', () => {
+  test.use({ viewport: DESKTOP });
+
+  test('shows a dash instead of a meter for someone who declined', async ({ page }) => {
+    await openRoster(page);
+    await page.getByRole('button', { name: /^Declined/ }).click();
+    await expect(showing(page)).toContainText('of 2,500 attendees');
+    const first = rosterCards(page).first();
+    await expect(first).toContainText(/declined/i);
+    await expect(first).not.toContainText('/3');
+    await expect(first.getByText('Trip ready: not counted')).toBeAttached();
+    await expect(first).not.toContainText('None');
   });
 });

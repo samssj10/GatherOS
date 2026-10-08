@@ -41,6 +41,12 @@
 </p>
 
 <p align="center">
+  <img src="docs/screenshots/planner-room-preview.png" alt="The room display in preview mode: an amber banner, a QR code marked SAMPLE and the sample code TEST42" width="900">
+  <br>
+  <sub><b>Preview room screens:</b> rehearse the projector before the event with a sample code that cannot check anyone in</sub>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/attendee-check-in.png" alt="Check-in on a phone: the journey with a live session, the camera view and the stamp collected screen" width="900">
   <br>
   <sub><b>Checking in on a phone:</b> a live session, scan the room's QR code, stamp collected</sub>
@@ -61,7 +67,7 @@
 - **Drag-and-drop itinerary.** Reorder sessions within a day or drop them onto another day, by mouse or keyboard. Every card also has up, down, previous-day and next-day buttons, and keyboard focus stays with the card after any move. After any move the affected day is re-timed automatically so sessions run back to back, 15 minutes apart, each keeping its own duration.
 - **Long trips are paged.** A trip of up to three days shows every day. Longer trips (up to seven) show three days at a time, with a jump bar of Day buttons, previous and next buttons and dashed side strips that name the neighbouring days. Drop a session on any Day button to send it to the end of that day, even when that day is on another page; with the keyboard, pick a session up with Space, Tab along the Day buttons and drop with Space. Each session also has a *Move to another day* select. Every cross-day move says where the session landed and its new time, offers *View Day N* when that day is off screen, and **Undo** puts both days back exactly as they were, including the gaps that re-timing closed.
 - **On a phone.** A top bar with the account menu and a bottom tab bar replace the sidebar. The itinerary board shows one day at a time (two on a tablet) with day tabs, and sessions can be moved with the same buttons, the Day tabs or a touch drag by the handle. The roster becomes a list of cards, with only the ones near the screen in the page, and each card has its own Nudge button. Every control is at least 44px.
-- **Room check-in code.** Every saved session card has a **Code** button that opens a full-screen display for the room: a QR code, a six-character code under it, a countdown to the next code and a live "checked in n of N" bar. The code changes every minute and only works while the session is live.
+- **Room check-in code.** While a session is live, its card shows a lime **Live · Code** link that opens a full-screen display for the room: a QR code, a six-character code under it, a countdown to the next code and a live "checked in n of N" bar. The code changes every minute and only works while the session is live; before or after the session the screen says so. **Preview room screens**, in the itinerary header, steps through every session with a sample code (`TEST42`) and a SAMPLE QR so the projector can be tested before the event; it makes no check-in requests and cannot stamp anyone.
 - **Budget breakdown.** A stacked bar by category (meals, activities, workshops, keynotes) with an "on track", "close to the limit" or "over budget" status.
 - **RSVP overview.** Accepted, pending and declined totals with a Half House marker.
 - **Virtualized roster.** All 2,500 attendees, searchable and filterable by response, with only about 20 rows in the DOM at any time. A **Trip ready** meter shows who has answered, accepted and booked a flight, and **Nudge** reminds pending attendees one at a time or all at once.
@@ -93,7 +99,7 @@ All of this is derived from real data; nothing is hard-coded to the demo.
 
 Levels: Newcomer (0 XP), Trailblazer (150), Explorer (300), Legend (450). Badges are earned from those actions; Front Row, Sea Legs and Full House mean stamping every keynote, every activity and every session, so they adapt to whatever itinerary exists. Only attendees who are going can collect stamps.
 
-Planner ranks follow completed milestones: Scout (0), Pathfinder (1), Trail Builder (2), Trailblazer (3), Summit Host (4).
+Planner ranks follow completed milestones: Scout (0), Pathfinder (1), Navigator (2), Captain (3), Summit Host (4).
 
 ## Tech stack
 
@@ -260,6 +266,7 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 | `POST /attendees/:id/stamps` | self only | Body `{ sessionId, code }`. Check in to a live session with the room code. Refusals carry a code: `NOT_GOING` (403), `ALREADY_STAMPED`, `CHECK_IN_NOT_OPEN`, `CHECK_IN_CLOSED` (409), `CODE_EXPIRED`, `CODE_INVALID` (400). Rate limited per attendee |
 | `GET /schedule` | planner | Full itinerary |
 | `GET /schedule/me` | signed in | Attendee-shaped itinerary (`AttendeeScheduleDTO[]`), each with a `checkInStatus` of `upcoming`, `live` or `ended` |
+| `GET /schedule/status` | planner | Each saved session's `checkInStatus` by id, so the board can show which are live |
 | `GET /schedule/budget` | planner | Budget, estimated spend and remaining |
 | `GET /schedule/:id/checkin-code` | planner | The session's current room code, when it changes, the event clock's "now", the session's check-in status and the checked-in and going counts |
 | `PUT /schedule` | planner | Replace the itinerary (used to save an AI draft) |
@@ -269,9 +276,9 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 
 ## Testing and CI
 
-**Unit tests (Vitest, 212 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
+**Unit tests (Vitest, 217 tests).** They cover the rules that matter most: re-timing (client and server copies), XP and levels, quests and badges, milestones, host ranks and budget status, and check-in: the event clock, the rotating room code, the refusal rules and QR payload parsing. Run them with `npm run test:unit`.
 
-**End-to-end (Playwright).** Seven specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
+**End-to-end (Playwright).** Eight specs run against a server whose clock is pinned, so the opening keynote is always live. [`e2e/checkin-flow.spec.ts`](e2e/checkin-flow.spec.ts) opens a planner's room code, then checks an attendee in on desktop (locked and live sessions, a wrong code, the right code) and on a phone without a camera (the check-in page falls back to typing the code). The journey in [`e2e/offsite-flow.spec.ts`](e2e/offsite-flow.spec.ts) covers the planner and RSVP side:
 
 1. Inject a signed planner cookie to bypass the login screen.
 2. Intercept `POST /api/ai/generate-schedule` with `page.route()` and return a hardcoded valid response.
@@ -286,6 +293,8 @@ All routes are under `/api`. Errors share one shape: `{ "error": { "code", "mess
 [`e2e/itinerary-moves.spec.ts`](e2e/itinerary-moves.spec.ts) covers long trips on a mocked five-day draft: dragging a session onto a Day button, the toast with *View* and *Undo*, a keyboard drag along the Day buttons (and Escape to cancel), the *Move to another day* select, and the server refusing anything but a valid day and times on `PUT /schedule/timing`.
 
 [`e2e/planner-mobile.spec.ts`](e2e/planner-mobile.spec.ts) covers the planner on a phone and a tablet: the top bar and tab bar, a dashboard and roster with nothing sticking out sideways or overlapping, the board one day at a time (including a resize and a touch drag), and the roster cards with search, filters and Nudge.
+
+[`e2e/room-preview.spec.ts`](e2e/room-preview.spec.ts) checks that the Code link appears only on the live session, that a session which is not live keeps its "Not live yet" notice, and that the sample room screens step through the sessions, show `TEST42` and never ask the server for a real code.
 
 [`e2e/sign-in.spec.ts`](e2e/sign-in.spec.ts) checks the two demo cards on a phone and a wide screen, and signing in as the planner from one.
 

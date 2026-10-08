@@ -34,12 +34,12 @@ import {
   Clock,
   GripVertical,
   MapPin,
-  QrCode,
+  Monitor,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { usePlannerSchedule, useReorderDay, useRestoreTiming, useScheduleDraft } from '@/api/schedule';
+import { usePlannerSchedule, useReorderDay, useRestoreTiming, useScheduleDraft, useSessionStatuses } from '@/api/schedule';
 import ErrorNotice from '@/components/ErrorNotice';
 import { DayJumpBar, PageRail } from '@/components/DayPager';
 import { DroppableDayChip } from '@/components/planner/ItineraryPager';
@@ -91,14 +91,14 @@ function CardBody({
   item,
   handle,
   actions,
-  afterCost,
+  roomLink,
   moveControl,
 }: {
   item: ScheduleItem;
   handle?: ReactNode;
   actions?: ReactNode;
-  /** Sits right after the price, e.g. the check-in code link. */
-  afterCost?: ReactNode;
+  /** Sits at the end of the time and place line, e.g. the check-in code link. */
+  roomLink?: ReactNode;
   /** A full-width row under the arrows, for jumping straight to any day. */
   moveControl?: ReactNode;
 }) {
@@ -122,13 +122,13 @@ function CardBody({
           <MapPin className="size-3.5" strokeWidth={2} aria-hidden="true" />
           {item.location}
         </span>
+        {roomLink}
       </div>
-      {/* Three fixed lines (price and code, arrows, day select) so nothing overflows a narrow column. */}
-      <div className="flex items-center gap-2.5 pl-8.5">
+      {/* Price on the left, the arrows on the right. In a column too narrow for both, the arrows drop to their own line. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-2 pl-8.5">
         <span className="font-mono text-sm font-semibold">{formatCurrency(item.costEstimate)}</span>
-        {afterCost}
+        {actions && <div className="ml-auto">{actions}</div>}
       </div>
-      {actions && <div className="flex justify-end">{actions}</div>}
       {moveControl && <div className="pl-8.5">{moveControl}</div>}
     </>
   );
@@ -139,6 +139,8 @@ interface CardCallbacks {
   onShiftPosition: (item: ScheduleItem, delta: -1 | 1) => void;
   /** The room check-in code only exists for saved sessions, not for an unsaved AI draft. */
   showCode: boolean;
+  /** Saved sessions that are live right now; only these show their room code link. */
+  liveIds: ReadonlySet<string>;
   /** The last day on the board; a session cannot move past it. */
   lastDay: number;
   /** Moves a session to the end of another day in one step. */
@@ -154,6 +156,7 @@ function ScheduleCard({
   onShiftDay,
   onShiftPosition,
   showCode,
+  liveIds,
   lastDay,
   onMoveToDay,
   dayChoices,
@@ -208,16 +211,16 @@ function ScheduleCard({
             </select>
           )
         }
-        afterCost={
-          showCode ? (
+        roomLink={
+          showCode && liveIds.has(item.id) ? (
             <Link
               to={`/planner/sessions/${item.id}/code`}
               aria-label={`Show check-in code for ${item.title}`}
-              title="Show check-in code"
-              className="inline-flex h-11 items-center gap-1.5 rounded-lg bg-ink px-3 text-xs font-semibold lg:h-8 lg:px-2.5 text-lime no-underline transition-colors hover:bg-ink-active hover:text-lime"
+              title="This session is live. Show its check-in code."
+              className="inline-flex h-11 items-center gap-1.5 rounded-lg bg-lime px-3 text-xs font-semibold text-ink no-underline transition-opacity hover:opacity-90 lg:h-8 lg:px-2.5"
             >
-              <QrCode className="size-3.5" strokeWidth={2} aria-hidden="true" />
-              Code
+              <span className="size-1.5 rounded-full bg-ink" aria-hidden="true" />
+              Live · Code
             </Link>
           ) : null
         }
@@ -365,6 +368,11 @@ function DayColumn({
 export default function CalendarBoard() {
   const saved = usePlannerSchedule();
   const draft = useScheduleDraft().data;
+  const statuses = useSessionStatuses().data;
+  const liveIds = useMemo(
+    () => new Set(Object.entries(statuses ?? {}).filter(([, status]) => status === 'live').map(([id]) => id)),
+    [statuses],
+  );
   const reorder = useReorderDay();
   const restoreTiming = useRestoreTiming();
   const addToast = useUiStore((state) => state.addToast);
@@ -590,7 +598,16 @@ export default function CalendarBoard() {
         <h2 id="calendar-title" className="font-display text-2xl font-bold">
           Itinerary
         </h2>
-        <span className="text-sm text-body">Drag cards or use the arrows. Days re-time automatically.</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="text-sm text-body">Drag cards or use the arrows. Days re-time automatically.</span>
+          <Link
+            to="/planner/room-preview"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-field bg-white px-3.5 text-[13px] font-medium text-ink no-underline transition-colors hover:bg-wash lg:min-h-9"
+          >
+            <Monitor className="size-4" strokeWidth={1.9} aria-hidden="true" />
+            Preview room screens
+          </Link>
+        </div>
       </div>
 
       {/* Keyboard drags: says which Day button is focused, as dnd-kit only speaks for pointer targets. */}
@@ -660,6 +677,7 @@ export default function CalendarBoard() {
                 onShiftDay={shiftDay}
                 onShiftPosition={shiftPosition}
                 showCode={!draft}
+                liveIds={liveIds}
                 lastDay={lastDay}
                 onMoveToDay={moveToDay}
                 dayChoices={paged ? days : null}

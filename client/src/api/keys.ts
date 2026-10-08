@@ -9,6 +9,8 @@ export const attendeeKeys = {
 
 export const scheduleKeys = {
   planner: ['schedule', 'planner'] as const,
+  // Under `planner` so anything that refreshes the saved itinerary refreshes who is live as well.
+  status: ['schedule', 'planner', 'status'] as const,
   mine: ['schedule', 'mine'] as const,
   budget: ['schedule', 'budget'] as const,
   checkInCode: (sessionId: string) => ['schedule', 'checkin-code', sessionId] as const,

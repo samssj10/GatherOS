@@ -8,13 +8,6 @@ export const RSVP_STYLES: Record<Attendee['rsvpStatus'], string> = {
   declined: 'bg-bad-tint text-bad-ink',
 };
 
-export const DIETARY_LABELS: Record<Attendee['dietaryPreference'], string> = {
-  none: 'None',
-  vegetarian: 'Vegetarian',
-  vegan: 'Vegan',
-  'gluten-free': 'Gluten-free',
-};
-
 // Avatar tints rotate by attendee number so a person keeps their color while filtering.
 const AVATAR_TINTS = [
   'bg-brand-tint text-brand-ink',
@@ -26,15 +19,7 @@ const AVATAR_TINTS = [
 export const avatarTint = (id: string) =>
   AVATAR_TINTS[Number.parseInt(id.slice(4), 10) % AVATAR_TINTS.length] ?? AVATAR_TINTS[0];
 
-/** Answered RSVP, accepted and flight booked: three steps to being ready for the trip. */
-export function tripReadiness(attendee: Attendee): { steps: [boolean, boolean, boolean]; score: number } {
-  const steps: [boolean, boolean, boolean] = [
-    attendee.rsvpStatus !== 'pending',
-    attendee.rsvpStatus === 'accepted',
-    attendee.flightAssigned,
-  ];
-  return { steps, score: steps.filter(Boolean).length };
-}
+export { dietaryLabel, tripReadiness } from '@/utils/roster';
 
 /** Props both roster layouts take. */
 export interface RosterListProps {

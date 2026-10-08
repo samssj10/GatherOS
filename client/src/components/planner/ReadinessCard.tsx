@@ -10,7 +10,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 /** Dark hero card: milestone ring plus the one thing to do next. */
 export default function ReadinessCard() {
-  const { numbers, milestones, unlock, isError, refetch } = usePlannerProgress();
+  const { numbers, milestones, rank, unlock, isError, refetch } = usePlannerProgress();
 
   if (isError) {
     return (
@@ -30,10 +30,12 @@ export default function ReadinessCard() {
   return (
     <section
       aria-labelledby="readiness-title"
-      className="flex flex-[3_1_440px] flex-wrap items-center gap-7 rounded-3xl bg-ink p-5 text-canvas sm:p-7"
+      className="flex flex-[3_1_440px] flex-wrap items-center gap-4 rounded-3xl bg-ink p-5 text-canvas sm:gap-7 sm:p-7"
     >
-      <div className="relative size-37 flex-none">
-        <svg width="148" height="148" viewBox="0 0 148 148" aria-hidden="true">
+      {/* On a phone the ring shrinks and shares a row with the rank and the next unlock. */}
+      <div className="flex items-center gap-3.5 max-sm:w-full sm:contents">
+      <div className="relative size-14 flex-none sm:size-37">
+        <svg viewBox="0 0 148 148" className="size-full" aria-hidden="true">
           <circle cx="74" cy="74" r={RING_RADIUS} fill="none" strokeWidth="14" className="stroke-ink-line" />
           <circle
             cx="74"
@@ -49,16 +51,24 @@ export default function ReadinessCard() {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <p className="font-display text-[40px] leading-none font-extrabold">
+          <p className="font-display text-lg leading-none font-extrabold sm:text-[40px]">
             {done}
             <span className="text-[#8a90a6]">/{milestones.length}</span>
           </p>
-          <p className="mt-1 text-xs text-ink-text">milestones</p>
+          <p className="mt-1 text-xs text-ink-text max-sm:hidden">milestones</p>
         </div>
+      </div>
+      <div className="min-w-0 sm:hidden">
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-lime">
+          {rank ? `${rank.name} · ` : ''}
+          {done} of {milestones.length} milestones
+        </p>
+        <p className="mt-0.5 text-sm text-ink-text-2">{unlock.eyebrow.replace(/^Next unlock · /, 'Next unlock: ')}</p>
+      </div>
       </div>
 
       <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-3">
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-lime">
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-lime max-sm:hidden">
           {unlock.eyebrow}
         </p>
         <h2
@@ -68,11 +78,11 @@ export default function ReadinessCard() {
           {unlock.title}
         </h2>
         <p className="text-[15px] leading-normal text-ink-text-2">{unlock.body}</p>
-        <div className="mt-1 flex flex-wrap gap-2.5">
+        <div className="mt-1 flex flex-wrap gap-2.5 max-sm:flex-col">
           {pending > 0 && (
             <Link
               to="/planner/attendees?response=pending"
-              className="inline-flex min-h-11.5 items-center gap-2 rounded-xl bg-lime px-5 text-[15px] font-semibold text-ink no-underline transition-opacity hover:opacity-90"
+              className="inline-flex min-h-11.5 items-center justify-center gap-2 rounded-xl bg-lime px-5 text-[15px] font-semibold text-ink no-underline transition-opacity hover:opacity-90"
             >
               <Send className="size-4.5" strokeWidth={1.9} aria-hidden="true" />
               Nudge {formatNumber(pending)} pending
@@ -80,7 +90,7 @@ export default function ReadinessCard() {
           )}
           <a
             href="#itinerary"
-            className="inline-flex min-h-11.5 items-center rounded-xl border border-ink-track px-4.5 text-[15px] font-medium text-canvas no-underline transition-colors hover:bg-ink-active"
+            className="inline-flex min-h-11.5 items-center rounded-xl border border-ink-track px-4.5 max-sm:hidden text-[15px] font-medium text-canvas no-underline transition-colors hover:bg-ink-active"
           >
             Review itinerary
           </a>
