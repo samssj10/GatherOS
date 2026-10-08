@@ -88,7 +88,7 @@ export default function PlannerRoomCode() {
 
             <p className="max-w-160 text-2xl leading-snug text-ink-text-2 lg:text-3xl">
               Scan to collect your stamp and <span className="font-semibold text-lime">+{XP.stamp} XP</span>. Open
-              GatherOS, go to Journey, and tap Scan.
+              GatherOS, go to Journey, and tap Scan code to check in.
             </p>
 
             {info && info.status !== 'live' && (

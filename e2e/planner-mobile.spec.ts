@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { plannerSession, sessionCookie } from './helpers/session';
 
 // The planner on a phone and a tablet: a slim top bar and a bottom tab bar replace the sidebar, which
@@ -528,5 +528,74 @@ test.describe('the roster on a wide screen', () => {
     await expect(page.getByRole('list', { name: 'Attendee roster' })).toHaveCount(0);
     await expect(page.getByTestId('roster-viewport')).toBeVisible();
     expect(await rosterCards(page).count()).toBeLessThan(40);
+  });
+});
+
+// ---- the roster page in the redesign: order, one row of filters, and plain wording ----
+
+for (const [name, size] of [['phone', PHONE], ['tablet', TABLET]] as const) {
+  test.describe(`the roster page on a ${name}, as designed`, () => {
+    test.use({ viewport: size, hasTouch: true, isMobile: true });
+
+    test('reads title, reminder, search, filters, then the list', async ({ page }) => {
+      await openRoster(page);
+      const top = async (locator: Locator) => (await locator.boundingBox())?.y ?? Number.NaN;
+      const title = await top(page.getByRole('heading', { name: 'Attendees' }));
+      const reminder = await top(page.getByRole('region', { name: 'Reminders' }));
+      const search = await top(page.getByLabel('Search attendees by name, email or department'));
+      const filters = await top(page.getByRole('group', { name: 'Filter by response' }));
+      const list = await top(page.getByRole('list', { name: 'Attendee roster' }));
+      expect([title, reminder, search, filters, list]).toEqual([title, reminder, search, filters, list].sort((a, b) => a - b));
+      expect(new Set([title, reminder, search, filters, list]).size).toBe(5);
+    });
+
+    test('keeps the filters in one row that scrolls sideways', async ({ page }) => {
+      await openRoster(page);
+      const chips = page.getByRole('group', { name: 'Filter by response' }).getByRole('button');
+      await expect(chips).toHaveCount(4);
+      const tops = await chips.evaluateAll((all) => all.map((chip) => Math.round(chip.getBoundingClientRect().top)));
+      expect(new Set(tops).size).toBe(1);
+      expect(await fitsAcross(page)).toBe(true);
+    });
+
+    test('explains "trip ready" on request', async ({ page }) => {
+      await openRoster(page);
+      const help = page.getByRole('button', { name: /What.s trip ready/ });
+      await expect(help).toHaveAttribute('aria-expanded', 'false');
+      await help.tap();
+      await expect(help).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator('#trip-ready-help')).toBeVisible();
+      await help.tap();
+      await expect(page.locator('#trip-ready-help')).toHaveCount(0);
+    });
+
+    test('says "not counted" for a decline and never "None" for a meal', async ({ page }) => {
+      await openRoster(page);
+      await expect(showing(page)).toHaveText('Showing all 2,500 attendees');
+      await page.getByRole('button', { name: /^Declined/ }).click();
+      await expect(showing(page)).toContainText('of 2,500 attendees');
+      const texts = await rosterCards(page).evaluateAll((cards) => cards.map((card) => card.textContent ?? ''));
+      expect(texts.length).toBeGreaterThan(0);
+      for (const text of texts) {
+        expect(text).toContain('not counted');
+        expect(text).not.toContain('/3');
+        expect(text).not.toMatch(/Dietary: None/);
+      }
+    });
+  });
+}
+
+test.describe('the roster table wording on a wide screen', () => {
+  test.use({ viewport: DESKTOP });
+
+  test('shows a dash instead of a meter for someone who declined', async ({ page }) => {
+    await openRoster(page);
+    await page.getByRole('button', { name: /^Declined/ }).click();
+    await expect(showing(page)).toContainText('of 2,500 attendees');
+    const first = rosterCards(page).first();
+    await expect(first).toContainText(/declined/i);
+    await expect(first).not.toContainText('/3');
+    await expect(first.getByText('Trip ready: not counted')).toBeAttached();
+    await expect(first).not.toContainText('None');
   });
 });

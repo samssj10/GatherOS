@@ -1,5 +1,5 @@
-import { Search } from 'lucide-react';
-import { useDeferredValue, useEffect, useMemo } from 'react';
+import { Info, Search } from 'lucide-react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAttendeeList, useAttendeeSummary, useNudge } from '@/api/attendees';
 import ErrorNotice from '@/components/ErrorNotice';
@@ -25,6 +25,7 @@ export default function AttendeeRoster() {
   const setRsvpFilter = useUiStore((state) => state.setRosterRsvpFilter);
   // A table on a wide screen, a list of cards below it. One tree at a time, so there is one set of controls.
   const wide = useMediaQuery(DESKTOP_QUERY);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // The dashboard links here with ?response=pending to open the roster already filtered.
   const [params] = useSearchParams();
@@ -67,10 +68,11 @@ export default function AttendeeRoster() {
     nudgingId: nudge.isPending ? nudge.variables?.[0] : undefined,
   };
 
+  // Below lg the header dissolves (`contents`), so the page reads title, reminder, search, filters, list.
   return (
     <section aria-labelledby="roster-title" className="flex w-full max-w-310 flex-col gap-5.5 p-4 sm:p-6 lg:p-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+      <header className="flex flex-wrap items-end justify-between gap-4 max-lg:contents">
+        <div className="max-lg:order-1">
           <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted">
             Roster{summary ? ` · ${formatNumber(summary.total)} invited` : ''}
           </p>
@@ -81,7 +83,7 @@ export default function AttendeeRoster() {
             Attendees
           </h1>
         </div>
-        <div className="flex min-h-12 flex-[0_1_360px] items-center gap-2.5 rounded-[14px] border border-field bg-white px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand max-sm:flex-[1_1_100%]">
+        <div className="flex min-h-12 flex-[0_1_360px] items-center gap-2.5 rounded-[14px] border border-field bg-white px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand max-lg:order-3 max-lg:w-full max-lg:flex-none">
           <Search className="size-4.5 shrink-0 text-muted" strokeWidth={1.9} aria-hidden="true" />
           <label htmlFor="roster-search" className="sr-only">
             Search attendees by name, email or department
@@ -97,10 +99,16 @@ export default function AttendeeRoster() {
         </div>
       </header>
 
-      <NudgeBanner />
+      <div className="max-lg:order-2">
+        <NudgeBanner />
+      </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="group" aria-label="Filter by response" className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-3 max-lg:order-4 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+        <div
+          role="group"
+          aria-label="Filter by response"
+          className="flex gap-2 max-lg:-mx-4 max-lg:overflow-x-auto max-lg:px-4 max-lg:pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:max-lg:-mx-6 sm:max-lg:px-6 lg:flex-wrap"
+        >
           {filters.map((filter) => {
             const active = rsvpFilter === filter.value;
             return (
@@ -109,7 +117,7 @@ export default function AttendeeRoster() {
                 type="button"
                 aria-pressed={active}
                 onClick={() => setRsvpFilter(filter.value)}
-                className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors ${
+                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors ${
                   active
                     ? 'border-ink bg-ink text-white'
                     : 'border-field bg-white text-ink hover:bg-wash'
@@ -127,18 +135,40 @@ export default function AttendeeRoster() {
             );
           })}
         </div>
-        <p aria-live="polite" className="text-sm text-body">
-          {isPending
-            ? 'Loading roster…'
-            : searching
-              ? `Showing ${formatNumber(rows.length)} of ${formatNumber(data.total)} · matches for “${deferredSearch.trim()}”`
-              : `Showing ${formatNumber(rows.length)} of ${formatNumber(data.total)} attendees`}
-        </p>
+        <div className="flex items-center justify-between gap-3 lg:justify-end">
+          <p aria-live="polite" className="text-sm text-body">
+            {isPending
+              ? 'Loading roster…'
+              : searching
+                ? `Showing ${formatNumber(rows.length)} of ${formatNumber(data.total)} · matches for “${deferredSearch.trim()}”`
+                : rows.length === data.total
+                  ? `Showing all ${formatNumber(data.total)} attendees`
+                  : `Showing ${formatNumber(rows.length)} of ${formatNumber(data.total)} attendees`}
+          </p>
+          <button
+            type="button"
+            aria-expanded={helpOpen}
+            aria-controls="trip-ready-help"
+            onClick={() => setHelpOpen((open) => !open)}
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium text-brand-ink hover:underline lg:hidden"
+          >
+            <Info className="size-4" strokeWidth={1.9} aria-hidden="true" />
+            What’s trip ready?
+          </button>
+        </div>
       </div>
 
-      {wide ? <RosterTable {...list} /> : <RosterCards {...list} />}
+      {helpOpen && (
+        <p id="trip-ready-help" className="rounded-2xl border border-line bg-white px-4 py-3 text-sm text-body max-lg:order-4 lg:hidden">
+          Trip ready = answered RSVP · accepted · flight booked. Someone who declined is not counted.
+        </p>
+      )}
 
-      <p className="text-[13px] text-muted">Trip ready = answered RSVP · accepted · flight booked.</p>
+      <div className="max-lg:order-5">{wide ? <RosterTable {...list} /> : <RosterCards {...list} />}</div>
+
+      <p className="hidden text-[13px] text-muted lg:block">
+        Trip ready = answered RSVP · accepted · flight booked. Someone who declined is not counted.
+      </p>
     </section>
   );
 }

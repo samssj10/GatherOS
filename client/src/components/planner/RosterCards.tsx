@@ -2,9 +2,9 @@ import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useLayoutEffect, useRef, useState } from 'react';
 import Skeleton from '@/components/Skeleton';
 import {
-  DIETARY_LABELS,
   RSVP_STYLES,
   avatarTint,
+  dietaryLabel,
   tripReadiness,
 } from '@/components/planner/rosterShared';
 import type { RosterListProps } from '@/components/planner/rosterShared';
@@ -24,7 +24,7 @@ function RosterCard({
   onNudge: (id: string) => void;
   nudging: boolean;
 }) {
-  const { steps, score } = tripReadiness(attendee);
+  const { steps, score, counted } = tripReadiness(attendee);
   const alreadyNudged = attendee.nudgedAt !== null;
 
   return (
@@ -56,21 +56,28 @@ function RosterCard({
         {attendee.department}
         <span aria-hidden="true"> · </span>
         <span className="sr-only">. Dietary: </span>
-        {DIETARY_LABELS[attendee.dietaryPreference]}
+        {dietaryLabel(attendee)}
       </p>
 
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className="flex gap-1" aria-hidden="true">
-            {steps.map((done, index) => (
-              <span key={index} className={`h-2 w-5.5 rounded ${done ? 'bg-ink' : 'bg-line'}`} />
-            ))}
-          </span>
-          <span className="font-mono text-xs text-body">
-            <span className="sr-only">Trip ready: </span>
-            {score}/3
-          </span>
-        </div>
+        {counted ? (
+          <div className="flex items-center gap-2.5">
+            <span className="flex gap-1" aria-hidden="true">
+              {steps.map((done, index) => (
+                <span key={index} className={`h-2 w-5.5 rounded ${done ? 'bg-ink' : 'bg-line'}`} />
+              ))}
+            </span>
+            <span className="font-mono text-xs text-body">
+              <span className="sr-only">Trip ready: </span>
+              {score}/3
+            </span>
+          </div>
+        ) : (
+          <p className="text-sm text-muted">
+            <span aria-hidden="true">— </span>
+            <span className="sr-only">Trip ready: </span>not counted
+          </p>
+        )}
         {attendee.rsvpStatus === 'pending' && (
           <button
             type="button"
