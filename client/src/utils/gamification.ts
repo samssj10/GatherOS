@@ -63,12 +63,24 @@ export function levelInfo(xp: number): LevelInfo {
   };
 }
 
+/**
+ * Where a quest stands: earned, open to do now, or waiting on something else (the first check-in waits for the
+ * RSVP). The Home page draws each differently, so the XP on offer only looks earned once it is.
+ */
+export type QuestState = 'done' | 'todo' | 'waiting';
+
 export interface Quest {
   id: string;
   label: string;
+  /** The line under the label. */
   sub: string;
+  /** What to say instead of `sub` on a wide screen, where the RSVP card is on the left, not at the top. */
+  subWide?: string;
   xp: number;
   done: boolean;
+  state: QuestState;
+  /** Where an open quest leads. */
+  to: string;
 }
 
 /** What the first-stop quest says, following the RSVP, the stamp and the session's clock. */
@@ -77,7 +89,7 @@ function checkInHint(first: AttendeeScheduleDTO, accepted: boolean, stamped: boo
   if (!accepted) return 'Unlocks after you RSVP';
   if (first.checkInStatus === 'live') return 'Happening now';
   if (first.checkInStatus === 'ended') return 'Check-in closed';
-  return `Opens at ${first.startTime} on Day ${first.day}`;
+  return `Opens ${first.startTime} on Day ${first.day}`;
 }
 
 export function buildQuests(attendee: Attendee, sessions: AttendeeScheduleDTO[]): Quest[] {
@@ -90,16 +102,21 @@ export function buildQuests(attendee: Attendee, sessions: AttendeeScheduleDTO[])
     {
       id: 'rsvp',
       label: 'Confirm your RSVP',
-      sub: accepted ? 'Done' : 'Takes one tap',
+      sub: accepted ? 'Done' : 'Answer at the top of this page',
+      subWide: accepted ? 'Done' : 'Answer on the left',
       xp: XP.rsvp,
       done: accepted,
+      state: accepted ? 'done' : 'todo',
+      to: '#rsvp',
     },
     {
       id: 'dietary',
       label: 'Set dietary preference',
-      sub: attendee.dietaryConfirmed ? DIETARY_LABELS[attendee.dietaryPreference] : 'Takes one tap',
+      sub: attendee.dietaryConfirmed ? DIETARY_LABELS[attendee.dietaryPreference] : 'Choose in Dietary',
       xp: XP.dietary,
       done: attendee.dietaryConfirmed,
+      state: attendee.dietaryConfirmed ? 'done' : 'todo',
+      to: '/attendee/preferences',
     },
     {
       id: 'flight',
@@ -107,6 +124,9 @@ export function buildQuests(attendee: Attendee, sessions: AttendeeScheduleDTO[])
       sub: attendee.flightAssigned ? 'Booked' : 'Waiting on the travel team',
       xp: XP.flight,
       done: attendee.flightAssigned,
+      // The travel team books it, so there is nothing for the attendee to open.
+      state: attendee.flightAssigned ? 'done' : 'waiting',
+      to: '',
     },
   ];
 
@@ -117,6 +137,8 @@ export function buildQuests(attendee: Attendee, sessions: AttendeeScheduleDTO[])
       sub: checkInHint(first, accepted, firstStamped),
       xp: XP.stamp,
       done: firstStamped,
+      state: firstStamped ? 'done' : accepted ? 'todo' : 'waiting',
+      to: '/attendee/schedule',
     });
   }
 

@@ -27,11 +27,15 @@ function HomeBody({ attendeeId }: { attendeeId: string }) {
     );
   }
 
+  const accepted = progress.attendee.rsvpStatus === 'accepted';
+
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
       <div className="flex min-w-0 flex-col gap-4 lg:flex-[1_1_380px] lg:gap-5">
+        {/* Until the person has said yes, the question comes first. */}
+        {!accepted && <RsvpCard attendee={progress.attendee} />}
         <LevelCard progress={progress} />
-        <RsvpCard attendee={progress.attendee} />
+        {accepted && <RsvpCard attendee={progress.attendee} />}
       </div>
       <div className="flex min-w-0 flex-col gap-4 lg:flex-[1.5_1_460px] lg:gap-5">
         <QuestList quests={progress.quests} />

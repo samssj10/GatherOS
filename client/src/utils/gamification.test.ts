@@ -115,6 +115,55 @@ describe('buildQuests', () => {
     ]);
   });
 
+  describe('how each quest stands, which decides how its XP is drawn', () => {
+    const states = (a: Attendee) => Object.fromEntries(buildQuests(a, sessions).map((quest) => [quest.id, quest.state]));
+
+    it('is "todo" for an open quest, "done" once earned, and "waiting" for the first check-in until the RSVP', () => {
+      expect(states(attendee({ rsvpStatus: 'pending', flightAssigned: true }))).toEqual({
+        rsvp: 'todo',
+        dietary: 'todo',
+        flight: 'done',
+        checkin: 'waiting',
+      });
+    });
+
+    it('opens the first check-in once the attendee is going', () => {
+      expect(states(attendee({ rsvpStatus: 'accepted', dietaryConfirmed: true })).checkin).toBe('todo');
+      expect(states(attendee({ rsvpStatus: 'accepted', dietaryConfirmed: true })).dietary).toBe('done');
+    });
+
+    it('treats a flight that is not booked as waiting on the travel team, not as something to do', () => {
+      expect(states(attendee({ flightAssigned: false })).flight).toBe('waiting');
+    });
+
+    it('is never "done" for XP that is not earned', () => {
+      const quests = buildQuests(attendee({ rsvpStatus: 'declined' }), sessions);
+      for (const quest of quests) expect(quest.done).toBe(quest.state === 'done');
+    });
+  });
+
+  describe('the lines under each quest', () => {
+    const quest = (a: Attendee, id: string) => buildQuests(a, sessions).find((entry) => entry.id === id)!;
+
+    it('tells the RSVP where to answer: at the top on a phone, on the left on a wide screen', () => {
+      const rsvp = quest(attendee({ rsvpStatus: 'pending' }), 'rsvp');
+      expect(rsvp.sub).toBe('Answer at the top of this page');
+      expect(rsvp.subWide).toBe('Answer on the left');
+      expect(quest(attendee({ rsvpStatus: 'accepted' }), 'rsvp').sub).toBe('Done');
+    });
+
+    it('points the dietary quest at Dietary until a choice is made, then names the choice', () => {
+      expect(quest(attendee(), 'dietary').sub).toBe('Choose in Dietary');
+      expect(quest(attendee({ dietaryConfirmed: true, dietaryPreference: 'vegan' }), 'dietary').sub).toBe('Vegan');
+    });
+
+    it('sends an open quest to where it is done', () => {
+      expect(quest(attendee(), 'rsvp').to).toBe('#rsvp');
+      expect(quest(attendee(), 'dietary').to).toBe('/attendee/preferences');
+      expect(quest(attendee(), 'checkin').to).toBe('/attendee/schedule');
+    });
+  });
+
   it('points the check-in quest at the first session of the trip', () => {
     const quest = buildQuests(attendee(), [...sessions].reverse()).find((entry) => entry.id === 'checkin');
     expect(quest?.label).toBe('Check in at keynote-1');
@@ -130,7 +179,7 @@ describe('buildQuests', () => {
     const going = attendee({ rsvpStatus: 'accepted' });
 
     it('says when check-in opens while the session is upcoming', () => {
-      expect(hint(going, 'upcoming')).toBe('Opens at 09:00 on Day 1');
+      expect(hint(going, 'upcoming')).toBe('Opens 09:00 on Day 1');
     });
 
     it('says it is happening now while the session is live', () => {

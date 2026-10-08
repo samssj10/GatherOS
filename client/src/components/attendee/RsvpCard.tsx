@@ -18,8 +18,9 @@ export default function RsvpCard({ attendee }: { attendee: Attendee }) {
 
   return (
     <section
+      id="rsvp"
       aria-live="polite"
-      className="flex flex-col gap-3.5 rounded-3xl border border-line bg-white p-5 lg:p-6"
+      className="flex scroll-mt-24 flex-col gap-3.5 rounded-3xl border border-line bg-white p-5 lg:p-6"
     >
       {status === 'accepted' && (
         <>
