@@ -1,5 +1,5 @@
-import { LogIn } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
+import SignOutIcon from '@/components/layout/SignOutIcon';
 import { ATTENDEE_NAV } from '@/components/layout/attendeeNav';
 import { useAttendeeProgress } from '@/hooks/useAttendeeProgress';
 import { useAuth } from '@/hooks/useAuth';
@@ -80,7 +80,7 @@ export default function TopNav() {
             aria-label="Sign out"
             className="flex size-11 items-center justify-center rounded-xl text-ink-text transition-colors hover:bg-ink-active hover:text-white"
           >
-            <LogIn className="size-5" strokeWidth={1.8} aria-hidden="true" />
+            <SignOutIcon className="size-5" />
           </button>
         </div>
       </div>
