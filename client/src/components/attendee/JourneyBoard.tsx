@@ -26,24 +26,14 @@ export default function JourneyBoard({ progress }: { progress: AttendeeProgress 
 
   return (
     <div className="flex flex-col gap-6">
-      {!accepted && (
-        <p id="stamp-hint" className="rounded-xl bg-warn-tint px-3.5 py-2.5 text-sm text-warn-ink">
-          Accept your RSVP on{' '}
-          <Link to="/attendee" className="font-semibold underline">
-            Home
-          </Link>{' '}
-          to start collecting stamps.
-        </p>
-      )}
-
       <section
         aria-label="Journey progress"
-        className="flex flex-wrap items-center gap-x-10 gap-y-5 rounded-[20px] bg-ink px-6 py-5 text-canvas"
+        className="flex flex-wrap items-center gap-x-10 gap-y-4 rounded-[20px] border border-line bg-white px-5.5 py-4.5"
       >
         <div className="flex flex-[2_1_320px] flex-col gap-2.5">
           <div className="flex justify-between text-sm">
-            <span>Stamps collected</span>
-            <span className="font-mono text-lime">
+            <span className="font-medium">Stamps collected</span>
+            <span className="font-mono text-body">
               {stamps.size} / {sessions.length}
             </span>
           </div>
@@ -58,18 +48,32 @@ export default function JourneyBoard({ progress }: { progress: AttendeeProgress 
             ))}
           </div>
         </div>
-        <div className="flex-[1_1_140px]">
-          <p className="text-[13px] text-ink-text-2">XP up for grabs</p>
-          <p className="font-display text-[26px] font-extrabold text-lime">
-            {unstamped.length > 0 ? `+${unstamped.length * XP.stamp}` : 'All collected'}
+        {accepted ? (
+          <>
+            <div className="flex-[1_1_140px]">
+              <p className="text-[13px] text-body">XP still to collect</p>
+              <p className="font-display text-2xl font-extrabold">
+                {unstamped.length > 0 ? `+${unstamped.length * XP.stamp}` : 'All collected'}
+              </p>
+            </div>
+            <div className="flex-[1_1_220px]">
+              <p className="text-[13px] text-body">Badges in play</p>
+              <p className="mt-1 text-[15px] font-medium">
+                {inPlay.length > 0 ? inPlay.map((badge) => badge.name).join(' · ') : 'All earned'}
+              </p>
+            </div>
+          </>
+        ) : (
+          <p
+            id="stamp-hint"
+            className="flex flex-[1_1_360px] flex-wrap items-center gap-x-3.5 gap-y-2 rounded-[14px] bg-warn-tint px-3.5 py-2.5 text-sm text-warn-ink"
+          >
+            <span className="flex-[1_1_200px]">RSVP to start collecting stamps.</span>
+            <Link to="/attendee" className="inline-flex min-h-8 items-center font-semibold text-warn-ink underline">
+              Go to Home
+            </Link>
           </p>
-        </div>
-        <div className="flex-[1_1_220px]">
-          <p className="text-[13px] text-ink-text-2">Badges in play</p>
-          <p className="mt-1 text-[15px] font-medium">
-            {inPlay.length > 0 ? inPlay.map((badge) => badge.name).join(' · ') : 'All earned'}
-          </p>
-        </div>
+        )}
       </section>
 
       {paging.paged && (
@@ -165,14 +169,14 @@ export default function JourneyBoard({ progress }: { progress: AttendeeProgress 
                         </div>
 
                         <div className="flex flex-wrap gap-1.5 pl-11.5">
-                          <span className="rounded-md bg-ink px-2 py-1 font-mono text-[11px] font-semibold text-lime">
+                          {/* Lime on black only once the stamp is earned; the XP on offer is plain grey. */}
+                          <span
+                            className={`rounded-md px-2 py-0.75 text-xs font-semibold ${
+                              stamped ? 'bg-ink text-lime' : 'bg-canvas text-body'
+                            }`}
+                          >
                             {stamped ? 'Stamped' : `+${XP.stamp} XP stamp`}
                           </span>
-                          {(session.category === 'activity' || session.category === 'workshop') && (
-                            <span className="rounded-md bg-warn-tint px-2 py-0.75 text-xs font-semibold text-warn-ink">
-                              RSVP required
-                            </span>
-                          )}
                           {hints.map((hint) => (
                             <span
                               key={hint}

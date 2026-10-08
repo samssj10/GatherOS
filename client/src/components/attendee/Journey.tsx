@@ -66,12 +66,16 @@ export default function Journey({ progress }: { progress: AttendeeProgress }) {
         </p>
       )}
 
-      <div className="flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-canvas">
-        <span className="text-sm">Day {day} rewards</span>
-        <span className="font-mono text-[13px] font-semibold text-lime">
-          {unstampedXp > 0 ? `up to +${unstampedXp} XP` : 'All stamps collected'}
-        </span>
-      </div>
+      <p className="text-sm text-body">
+        Day {day} ·{' '}
+        {unstampedXp > 0 ? (
+          <>
+            up to <span className="font-semibold text-ink">+{unstampedXp} XP</span> in stamps
+          </>
+        ) : (
+          'all stamps collected'
+        )}
+      </p>
 
       <ol className="flex flex-col gap-3.5">
         {daySessions.map((session, index) => {
@@ -121,14 +125,14 @@ export default function Journey({ progress }: { progress: AttendeeProgress }) {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5 border-t border-hairline pt-2">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-ink px-2 py-1 font-mono text-[11px] font-semibold text-lime">
+                  {/* Lime on black only once the stamp is earned; the XP on offer is plain grey. */}
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.75 text-xs font-semibold ${
+                      stamped ? 'bg-ink text-lime' : 'bg-canvas text-body'
+                    }`}
+                  >
                     {stamped ? 'Stamped' : `+${XP.stamp} XP stamp`}
                   </span>
-                  {(session.category === 'activity' || session.category === 'workshop') && (
-                    <span className="rounded-md bg-warn-tint px-2 py-0.75 text-xs font-semibold text-warn-ink">
-                      RSVP required
-                    </span>
-                  )}
                   {hints.map((hint) => (
                     <span
                       key={hint}

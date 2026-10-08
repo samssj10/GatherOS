@@ -11,7 +11,7 @@ import type { BadgeProgress } from '@/utils/gamification';
 interface Props {
   session: AttendeeScheduleDTO;
   attendeeId: string;
-  /** Only attendees who are going can check in. */
+  /** Only attendees who are going can check in; anyone else is sent to the RSVP. */
   accepted: boolean;
   stamped: boolean;
   /** Badges this stamp counts toward, e.g. "Front Row 1 of 2". */
@@ -31,16 +31,29 @@ function LiveLabel() {
   );
 }
 
+/**
+ * A session is on but this person is not going (declined, or has not answered): the code is not for them,
+ * so the way forward is the RSVP.
+ */
+function RsvpToCheckIn() {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-body">
+        <span className="size-2 rounded-full bg-ok" aria-hidden="true" />
+        Happening now · check-in for confirmed attendees
+      </span>
+      <Link
+        to="/attendee"
+        className="flex min-h-11 items-center justify-center rounded-xl border-[1.5px] border-brand text-sm font-semibold text-brand-ink no-underline transition-colors hover:bg-brand-tint hover:text-brand-ink"
+      >
+        RSVP to check in
+      </Link>
+    </div>
+  );
+}
+
 /** Desktop: type the 6-character code shown on the room screen. */
-function InlineCodeForm({
-  session,
-  attendeeId,
-  accepted,
-}: {
-  session: AttendeeScheduleDTO;
-  attendeeId: string;
-  accepted: boolean;
-}) {
+function InlineCodeForm({ session, attendeeId }: { session: AttendeeScheduleDTO; attendeeId: string }) {
   const [code, setCode] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const checkIn = useCheckInWithCode(attendeeId);
@@ -75,22 +88,20 @@ function InlineCodeForm({
           maxLength={6}
           placeholder="K7Q2XM"
           value={code}
-          disabled={!accepted}
           onChange={(event) => {
             setCode(normalizeCode(event.target.value));
             setLocalError(null);
             if (checkIn.isError) checkIn.reset();
           }}
           aria-invalid={error !== null}
-          aria-describedby={`${errorId}${accepted ? '' : ' stamp-hint'}`}
-          className={`min-h-11 min-w-0 flex-1 rounded-xl border-2 bg-white px-3.5 font-mono text-base tracking-[0.25em] uppercase placeholder:tracking-[0.25em] placeholder:text-muted disabled:bg-wash ${
+          aria-describedby={errorId}
+          className={`min-h-11 min-w-0 flex-1 rounded-xl border-2 bg-white px-3.5 font-mono text-base tracking-[0.25em] uppercase placeholder:tracking-[0.25em] placeholder:text-placeholder ${
             error ? 'border-bad-ink' : 'border-field'
           }`}
         />
         <button
           type="submit"
-          disabled={!accepted || checkIn.isPending}
-          aria-describedby={accepted ? undefined : 'stamp-hint'}
+          disabled={checkIn.isPending}
           className="min-h-11 rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-line disabled:text-muted"
         >
           Check in<span className="sr-only"> to {session.sessionTitle}</span>
@@ -140,36 +151,31 @@ export default function SessionCheckIn({
   }
 
   if (session.checkInStatus === 'live') {
+    if (!accepted) {
+      return (
+        <div className={wrapper}>
+          <RsvpToCheckIn />
+        </div>
+      );
+    }
     if (layout === 'desktop') {
       return (
         <div className={wrapper}>
-          <InlineCodeForm session={session} attendeeId={attendeeId} accepted={accepted} />
+          <InlineCodeForm session={session} attendeeId={attendeeId} />
         </div>
       );
     }
     return (
       <div className={`${wrapper} flex flex-col gap-2.5`}>
         <LiveLabel />
-        {accepted ? (
-          <Link
-            to={`/attendee/check-in?session=${session.id}`}
-            className="flex min-h-12 items-center justify-center gap-2 rounded-[14px] bg-brand text-base font-semibold text-white no-underline transition-colors hover:bg-brand-hover hover:text-white"
-          >
-            <ScanLine className="size-4.5" strokeWidth={2} aria-hidden="true" />
-            Scan code to check in
-            <span className="sr-only"> for {session.sessionTitle}</span>
-          </Link>
-        ) : (
-          <button
-            type="button"
-            disabled
-            aria-describedby="stamp-hint"
-            className="flex min-h-12 items-center justify-center gap-2 rounded-[14px] bg-line text-base font-semibold text-muted"
-          >
-            <ScanLine className="size-4.5" strokeWidth={2} aria-hidden="true" />
-            Scan code to check in
-          </button>
-        )}
+        <Link
+          to={`/attendee/check-in?session=${session.id}`}
+          className="flex min-h-12 items-center justify-center gap-2 rounded-[14px] bg-brand text-base font-semibold text-white no-underline transition-colors hover:bg-brand-hover hover:text-white"
+        >
+          <ScanLine className="size-4.5" strokeWidth={2} aria-hidden="true" />
+          Scan code to check in
+          <span className="sr-only"> for {session.sessionTitle}</span>
+        </Link>
       </div>
     );
   }

@@ -6,7 +6,7 @@ import type { Quest, QuestState } from '@/utils/gamification';
 const XP_CHIP: Record<QuestState, string> = {
   done: 'bg-ink text-lime',
   waiting: 'bg-brand-tint text-brand-ink',
-  todo: 'bg-wash text-body',
+  todo: 'bg-canvas text-body',
 };
 
 function QuestRow({ quest }: { quest: Quest }) {
