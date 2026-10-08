@@ -9,6 +9,10 @@ export const listSchedule: RequestHandler = (_req, res) => {
   res.json(scheduleService.listSchedule());
 };
 
+export const listSessionStatuses: RequestHandler = (_req, res) => {
+  res.json(scheduleService.listSessionStatuses());
+};
+
 export const listMySchedule: RequestHandler = (_req, res) => {
   res.json(scheduleService.listAttendeeSchedule(getSession(res).eventId));
 };

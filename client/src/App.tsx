@@ -11,6 +11,7 @@ const Login = lazy(() => import('@/views/Login'));
 const PlannerDashboard = lazy(() => import('@/views/PlannerDashboard'));
 const PlannerAttendees = lazy(() => import('@/views/PlannerAttendees'));
 const PlannerRoomCode = lazy(() => import('@/views/PlannerRoomCode'));
+const PlannerRoomPreview = lazy(() => import('@/views/PlannerRoomPreview'));
 const AttendeeView = lazy(() => import('@/views/AttendeeView'));
 const AttendeeSchedule = lazy(() => import('@/views/AttendeeSchedule'));
 const AttendeePassport = lazy(() => import('@/views/AttendeePassport'));
@@ -32,6 +33,7 @@ export default function App() {
           </Route>
           {/* Full-screen room display: no sidebar, meant to be projected. */}
           <Route path="/planner/sessions/:id/code" element={<PlannerRoomCode />} />
+          <Route path="/planner/room-preview" element={<PlannerRoomPreview />} />
         </Route>
 
         <Route element={<RequireRole role="attendee" />}>

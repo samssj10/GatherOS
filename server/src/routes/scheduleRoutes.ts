@@ -10,6 +10,8 @@ scheduleRouter.use(requireAuth);
 // Attendee-shaped payload (AttendeeScheduleDTO) available to any signed-in user.
 scheduleRouter.get('/me', controller.listMySchedule);
 scheduleRouter.get('/', requireRole('planner'), controller.listSchedule);
+// Which saved sessions are upcoming, live or ended, for the board's live Code links.
+scheduleRouter.get('/status', requireRole('planner'), controller.listSessionStatuses);
 scheduleRouter.get('/budget', requireRole('planner'), controller.getBudgetSummary);
 // The rotating code shown on the room screen. Planner only.
 scheduleRouter.get(

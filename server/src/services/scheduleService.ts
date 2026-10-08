@@ -54,6 +54,11 @@ export function sessionCheckInStatus(item: ScheduleItem, now: Date = eventNow())
   return checkInStatus(item, now, parseEventDate(env.EVENT_START_DATE));
 }
 
+/** Where every saved session stands on the event clock, by session id: the planner's board shows who is live. */
+export function listSessionStatuses(now: Date = eventNow()): Record<string, CheckInStatus> {
+  return Object.fromEntries(db.schedule.map((item) => [item.id, sessionCheckInStatus(item, now)]));
+}
+
 // Meals and keynotes are open to everyone; workshops and activities need a headcount.
 export function toAttendeeScheduleDTO(
   item: ScheduleItem,
