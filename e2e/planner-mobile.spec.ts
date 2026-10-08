@@ -48,9 +48,14 @@ for (const [name, size] of [['phone', PHONE], ['tablet', TABLET]] as const) {
       await expect(page.getByRole('heading', { level: 1, name: 'Mission control' })).toBeVisible();
     });
 
-    test('shows the host rank in the page, on the dashboard only', async ({ page }) => {
+    test('shows the host rank in the page (tablet) or the hero (phone), on the dashboard only', async ({ page }) => {
       await open(page);
-      await expect(hostRank(page)).toBeVisible();
+      if (name === 'phone') {
+        await expect(hostRank(page)).toHaveCount(0);
+        await expect(page.locator('section[aria-labelledby="readiness-title"]')).toContainText(/Trail Builder · 2 of 4 milestones/);
+      } else {
+        await expect(hostRank(page)).toBeVisible();
+      }
       await tabBar(page).getByRole('link', { name: /^Attendees/ }).click();
       await expect(page.getByRole('heading', { level: 1, name: 'Attendees' })).toBeVisible();
       await expect(hostRank(page)).toHaveCount(0);
@@ -182,17 +187,31 @@ for (const [name, size, columns] of [['phone', PHONE, 1], ['tablet', TABLET, 3],
 test.describe('the AI bar and page padding on a phone', () => {
   test.use({ viewport: PHONE, hasTouch: true, isMobile: true });
 
+  test('is one button until it is tapped', async ({ page }) => {
+    await open(page);
+    const opener = page.getByRole('button', { name: 'Generate a draft with AI' });
+    await expect(opener).toBeVisible();
+    await expect(opener).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByLabel('Describe the offsite you want to plan')).toHaveCount(0);
+    expect((await opener.boundingBox())?.width ?? 0).toBeGreaterThan(300);
+
+    await opener.tap();
+    await expect(page.getByLabel('Describe the offsite you want to plan')).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Generate draft' })).toBeVisible();
+    await expect(opener).toHaveCount(0);
+  });
+
   test('scrolls away with the page instead of covering it', async ({ page }) => {
     await open(page);
-    const position = await page.locator('header').filter({ has: page.getByRole('search') }).evaluate((el) => getComputedStyle(el).position);
-    expect(position).not.toBe('sticky');
+    const bar = page.locator('header').filter({ has: page.getByRole('search') });
+    expect(await bar.evaluate((el) => getComputedStyle(el).position)).not.toBe('sticky');
     await page.evaluate(() => window.scrollTo(0, 600));
-    const top = await page.locator('header').filter({ has: page.getByRole('search') }).evaluate((el) => el.getBoundingClientRect().bottom);
-    expect(top).toBeLessThan(0);
+    expect(await bar.evaluate((el) => el.getBoundingClientRect().bottom)).toBeLessThan(0);
   });
 
   test('stacks its options one to a row, each as wide as the screen allows', async ({ page }) => {
     await open(page);
+    await page.getByRole('button', { name: 'Generate a draft with AI' }).tap();
     await page.getByRole('button', { name: 'Generation options' }).click();
     const widths = await page.locator('#ai-options input, #ai-options select').evaluateAll((all) => all.map((el) => Math.round(el.getBoundingClientRect().width)));
     expect(widths).toHaveLength(3);
@@ -202,10 +221,27 @@ test.describe('the AI bar and page padding on a phone', () => {
 
   test('uses a short prompt hint that fits, and a Generate button that fills the row', async ({ page }) => {
     await open(page);
+    await page.getByRole('button', { name: 'Generate a draft with AI' }).tap();
     const placeholder = await page.getByLabel('Describe the offsite you want to plan').getAttribute('placeholder');
     expect(placeholder).toBe('Describe your offsite, e.g. 3 days in Lisbon');
     const generate = await page.getByRole('button', { name: 'Generate draft' }).boundingBox();
     expect(generate?.width ?? 0).toBeGreaterThan(200);
+  });
+
+  test('folds back to one button once a draft has been made', async ({ page }) => {
+    await openDraft(page, 2);
+    await expect(page.getByRole('button', { name: 'Generate a draft with AI' })).toBeVisible();
+    await expect(page.getByLabel('Describe the offsite you want to plan')).toHaveCount(0);
+  });
+
+  test('leaves out the subtitle and the Review itinerary button, and keeps one Nudge button', async ({ page }) => {
+    await open(page);
+    await expect(page.getByText('Budget, responses and the itinerary at a glance.')).toBeHidden();
+    await expect(page.getByRole('link', { name: 'Review itinerary' })).toBeHidden();
+    await expect(page.getByRole('link', { name: /^Nudge .* pending/ })).toBeVisible();
+    const ring = await page.locator('section[aria-labelledby="readiness-title"] svg').first().boundingBox();
+    expect(ring?.width ?? 0).toBeLessThan(70);
+    expect(await fitsAcross(page)).toBe(true);
   });
 
   test('keeps a 16px margin at the sides of the page', async ({ page }) => {
@@ -258,6 +294,11 @@ async function openDraft(page: Page, days: number) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(draftFor(days)) }),
   );
   await page.goto('/planner');
+  // On a phone the bar is one button until it is tapped.
+  const opener = page.getByRole('button', { name: 'Generate a draft with AI' });
+  const prompt = page.getByLabel('Describe the offsite you want to plan');
+  await expect(opener.or(prompt)).toBeVisible();
+  if (await opener.isVisible()) await opener.click();
   await page.getByLabel('Describe the offsite you want to plan').fill(`${days}-day retreat in Lisbon`);
   await page.getByRole('button', { name: 'Generate draft' }).click();
   await expect(page.getByRole('navigation', { name: 'Jump to day' })).toBeVisible();

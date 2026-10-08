@@ -33,11 +33,11 @@ export default function PlannerDashboard() {
               Mission control
             </h1>
           </div>
-          <p className="text-[15px] text-body">Budget, responses and the itinerary at a glance.</p>
+          <p className="text-[15px] text-body max-sm:hidden">Budget, responses and the itinerary at a glance.</p>
         </header>
 
-        {/* The sidebar holds this card on a wide screen; on a phone it sits here instead. */}
-        <div className="lg:hidden">
+        {/* The sidebar holds this card on a wide screen; a tablet shows it here, and on a phone the hero says the rank. */}
+        <div className="max-sm:hidden lg:hidden">
           <HostRankCard />
         </div>
 
