@@ -5,6 +5,7 @@ import { usePlannerSchedule } from '@/api/schedule';
 import QrCode from '@/components/QrCode';
 import RoomScreen from '@/components/planner/RoomScreen';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { sampleCheckedIn } from '@/utils/checkIn';
 import { formatNumber } from '@/utils/format';
 
 /** What the sample screens show in place of a real code. It is not a valid check-in code anywhere. */
@@ -20,6 +21,8 @@ const SAMPLE_QR_TEXT = 'GatherOS sample room screen. Not a check-in code.';
 export default function PlannerRoomPreview() {
   const schedule = usePlannerSchedule();
   const accepted = useAttendeeSummary().data?.rsvp.accepted;
+  // A made-up figure, so the bar and the count can be seen working without touching real check-ins.
+  const sample = accepted === undefined ? undefined : sampleCheckedIn(accepted);
   const [params, setParams] = useSearchParams();
   usePageTitle('Preview room screens');
 
@@ -68,7 +71,10 @@ export default function PlannerRoomPreview() {
       stop={session ? `Stop ${index + 1} · Day ${session.day} · ${session.startTime} – ${session.endTime}` : 'Preview'}
       title={session?.title ?? (schedule.isPending ? 'Loading…' : 'No saved sessions to preview')}
       location={session?.location}
-      checked={{ value: `[n] of ${accepted === undefined ? '…' : formatNumber(accepted)}`, percent: 25 }}
+      checked={{
+        value: sample ? `${formatNumber(sample.count)} of ${formatNumber(accepted ?? 0)}` : '…',
+        percent: sample?.percent ?? 0,
+      }}
       qr={
         <>
           <QrCode value={SAMPLE_QR_TEXT} label="Sample QR code, not for checking in" className="size-72 sm:size-90" />

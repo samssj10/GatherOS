@@ -69,3 +69,11 @@ export function formatCountdown(seconds: number): string {
   const whole = Math.max(0, Math.floor(seconds));
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
 }
+
+/** The made-up "checked in" figure on the sample room screens: 996, but never more than the people going. */
+export const SAMPLE_CHECKED_IN = 996;
+
+export function sampleCheckedIn(going: number): { count: number; percent: number } {
+  const count = Math.min(SAMPLE_CHECKED_IN, Math.max(0, going));
+  return { count, percent: going > 0 ? Math.round((count / going) * 100) : 0 };
+}
