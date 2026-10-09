@@ -9,6 +9,7 @@ import {
   nextSession,
   normalizeCode,
   parseCheckInPayload,
+  sampleCheckedIn,
   secondsRemaining,
 } from './checkIn';
 
@@ -134,5 +135,16 @@ describe('countdown', () => {
     expect(formatCountdown(75)).toBe('1:15');
     expect(formatCountdown(0)).toBe('0:00');
     expect(formatCountdown(-3)).toBe('0:00');
+  });
+});
+
+describe('sampleCheckedIn', () => {
+  it('is 996 of the people going, and fills the bar to match', () => {
+    expect(sampleCheckedIn(1235)).toEqual({ count: 996, percent: 81 });
+  });
+
+  it('never claims more people than are going', () => {
+    expect(sampleCheckedIn(500)).toEqual({ count: 500, percent: 100 });
+    expect(sampleCheckedIn(0)).toEqual({ count: 0, percent: 0 });
   });
 });

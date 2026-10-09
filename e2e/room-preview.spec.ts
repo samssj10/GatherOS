@@ -67,6 +67,11 @@ test.describe('previewing the room screens', () => {
     await expect(page.getByText('SAMPLE', { exact: true })).toBeVisible();
     await expect(page.getByText('Sample code. The real one appears when the session starts.')).toBeVisible();
     await expect(page.getByText('Shown in Grand Ballroom')).toBeVisible();
+    // A made-up figure that fills the bar to match, never the live count of anyone.
+    await expect(page.getByText(/^996 of [\d,]+$/)).toBeVisible();
+    await expect(page.getByText('[n]')).toHaveCount(0);
+    const fill = await page.getByRole('main').locator('div[style*="width"]').first().evaluate((el) => (el as HTMLElement).style.width);
+    expect(Number.parseInt(fill, 10)).toBeGreaterThan(70);
     await expect(page.getByText(/New code in/)).toHaveCount(0);
     expect(requested).toEqual([]);
   });

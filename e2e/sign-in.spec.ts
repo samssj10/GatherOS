@@ -100,3 +100,25 @@ test.describe('the stamp strip on a wide screen', () => {
     expect(visibleStrips).toBe(1);
   });
 });
+
+test.describe('the pages after sign-in', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('start downloading while someone is still on the sign-in page, only for the account they pick', async ({ page }) => {
+    const requested: string[] = [];
+    page.on('request', (request) => requested.push(request.url()));
+    await page.goto('/login');
+    await expect(page.getByRole('button', { name: /Planner demo/ })).toBeVisible();
+    // Nothing is fetched ahead of a choice.
+    expect(requested.some((url) => /PlannerDashboard/.test(url))).toBe(false);
+
+    await page.getByRole('button', { name: /Planner demo/ }).click();
+    await expect.poll(() => requested.some((url) => /PlannerDashboard/.test(url))).toBe(true);
+    // Signing in has not happened yet, and the other account's pages were not fetched.
+    expect(requested.some((url) => /\/api\/auth\/login/.test(url))).toBe(false);
+    expect(requested.some((url) => /AttendeeView/.test(url))).toBe(false);
+
+    await page.getByRole('button', { name: /Continue as planner/ }).click();
+    await expect(page).toHaveURL(/\/planner$/);
+  });
+});
