@@ -83,7 +83,7 @@
 ### Platform
 
 - Role-based access: planners and attendees see different routes and have different API permissions.
-- Every page is its own lazy chunk, and the framework code (React, the router, TanStack Query) sits in two long-cached chunks of its own, so a deploy that only changes the app leaves most of the first download cached for returning visitors.
+- Every page is its own lazy chunk, and the framework code (React, the router, TanStack Query) sits in two long-cached chunks of its own, so a deploy that only changes the app leaves most of the first download cached for returning visitors. Choosing a demo account on the sign-in page starts fetching that role's first pages, so signing in feels quicker on a slow connection.
 - Accessibility audited with axe-core: 0 violations across every screen, including the richer states (drafts, stamps, nudges). Skip link, live regions, per-page titles and keyboard alternatives for every drag.
 - Unit tests for the business rules, plus a Playwright end-to-end journey with network interception, all run in CI on every push.
 

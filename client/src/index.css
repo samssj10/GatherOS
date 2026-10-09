@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@config '../tailwind.config.js';
 
 /*
  * Design tokens from the GatherOS redesign. Components use these names (bg-ink, text-muted,

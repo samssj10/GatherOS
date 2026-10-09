@@ -7,6 +7,7 @@ import { ApiError } from '@/api/client';
 import PageFallback from '@/components/PageFallback';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { prefetchHome } from '@/utils/prefetch';
 import { roleHome } from '@/utils/roleHome';
 
 interface DemoAccount {
@@ -245,7 +246,11 @@ export default function Login() {
                   key={account.id}
                   type="button"
                   aria-pressed={active}
+                  // Whoever lingers on a demo account is about to sign in as it: start fetching its pages.
+                  onPointerEnter={() => prefetchHome(account.id)}
+                  onFocus={() => prefetchHome(account.id)}
                   onClick={() => {
+                    prefetchHome(account.id);
                     setDemo(account.id);
                     setEmail(account.email);
                     setError(null);
